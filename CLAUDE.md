@@ -1,7 +1,8 @@
 # PortGlimpse
 
 A free Mac menu bar app that lists listening ports with their project folder and kills a process after confirmation; a Zewify product.
-Design: `docs/superpowers/specs/2026-09-30-portglimpse-design.md`. Plan: `docs/superpowers/plans/2026-09-30-portglimpse-app.md`.
+Design: `docs/superpowers/specs/2026-09-30-portglimpse-design.md`.
+Plan: `docs/superpowers/plans/2026-09-30-portglimpse-app.md`.
 
 ## Layout
 
