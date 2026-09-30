@@ -43,6 +43,10 @@ final class PanelModel {
     private var appliedRefresh = 0
     private var liveLoop: Task<Void, Never>?
     private var backgroundLoop: Task<Void, Never>?
+    /// When other users' ports were last read. They are system services that rarely change, and reading them
+    /// means running netstat, so the live loop reads them every few seconds rather than every second.
+    private var otherUsersScannedAt: ContinuousClock.Instant?
+    private static let otherUsersInterval: Duration = .seconds(5)
 
     init(defaults: UserDefaults = .standard, overrideStore: OverrideStore = OverrideStore(fileURL: OverrideStore.defaultURL)) {
         self.defaults = defaults
@@ -76,10 +80,16 @@ final class PanelModel {
         guard viewers == 1 else { return }
         liveLoop = Task {
             while !Task.isCancelled {
-                await refresh()
+                await refresh(includeOtherUsers: otherUsersDue)
                 try? await Task.sleep(for: .seconds(1))
             }
         }
+    }
+
+    private var otherUsersDue: Bool {
+        guard showAll else { return false }
+        guard let last = otherUsersScannedAt else { return true }
+        return ContinuousClock.now - last >= Self.otherUsersInterval
     }
 
     func viewerDisappeared() {
@@ -126,16 +136,21 @@ final class PanelModel {
         let result = await Task.detached(priority: .utility) { PortScan.run(showAll: showAll, overrides: overrides) }.value
         guard generation > appliedRefresh else { return }
         appliedRefresh = generation
-        if includeOtherUsers {
-            rows = result.rows
-            otherUsersProblem = result.otherUsersProblem
+        // Assign only what changed: the panel redraws on every assignment, and most seconds nothing changes.
+        let newRows: [Row]
+        if showAll {
+            otherUsersScannedAt = .now
+            newRows = result.rows
+            if otherUsersProblem != result.otherUsersProblem { otherUsersProblem = result.otherUsersProblem }
         } else {
-            // A count-only scan knows nothing about other users, so it must not wipe what a viewer last saw.
-            rows = result.rows.filter { $0.section != .otherUsers } + rows.filter { $0.section == .otherUsers }
+            // A scan without netstat knows nothing about other users, so it must not wipe what a viewer last saw.
+            newRows = result.rows.filter { $0.section != .otherUsers } + rows.filter { $0.section == .otherUsers }
         }
-        problem = result.problem
+        if rows != newRows { rows = newRows }
+        if problem != result.problem { problem = result.problem }
         let live = Set(rows.map(\.pid))
-        phases = phases.filter { live.contains($0.key) }
+        let kept = phases.filter { live.contains($0.key) }
+        if kept.count != phases.count { phases = kept }
     }
 
     // MARK: Kill flow

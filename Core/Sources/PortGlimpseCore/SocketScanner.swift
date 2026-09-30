@@ -16,19 +16,20 @@ public struct OwnProcessSource: ListenerSource {
     public init() {}
 
     public func listeners() throws -> [Listener] {
-        let me = getuid()
-        return try Self.allPIDs()
-            .filter { ProcessInspector.uid(of: $0) == me }
+        try Self.pids(of: getuid())
             .flatMap { pid in Set(Self.listeningPorts(of: pid)).map { Listener(port: $0, pid: pid) } }
     }
 
-    static func allPIDs() throws -> [Int32] {
-        let count = proc_listallpids(nil, 0)
-        guard count > 0 else { throw ScanError.processListUnavailable }
-        var pids = [Int32](repeating: 0, count: Int(count) * 2)
-        let filled = proc_listallpids(&pids, Int32(pids.count * MemoryLayout<Int32>.size))
+    /// The kernel filters by owner in one call, instead of one `sysctl` per process on the Mac;
+    /// that per-process check was nearly all of a scan's CPU time.
+    static func pids(of uid: uid_t) throws -> [Int32] {
+        let bytes = proc_listpids(UInt32(PROC_UID_ONLY), uid, nil, 0)
+        guard bytes > 0 else { throw ScanError.processListUnavailable }
+        // Room for processes started between the two calls.
+        var pids = [Int32](repeating: 0, count: Int(bytes) / MemoryLayout<Int32>.size * 2)
+        let filled = proc_listpids(UInt32(PROC_UID_ONLY), uid, &pids, Int32(pids.count * MemoryLayout<Int32>.size))
         guard filled > 0 else { throw ScanError.processListUnavailable }
-        return Array(pids.prefix(Int(filled))).filter { $0 > 0 }
+        return Array(pids.prefix(Int(filled) / MemoryLayout<Int32>.size)).filter { $0 > 0 }
     }
 
     static func listeningPorts(of pid: Int32) -> [UInt16] {

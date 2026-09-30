@@ -143,6 +143,8 @@ Each unit below has one job and is tested on its own.
 
 - `PortGlimpseApp`: `MenuBarExtra` with the icon and count, the panel view and the Settings submenu.
 - A `PanelModel` polls `Snapshot` once a second while the panel or the pop-out window is showing, and stops when neither is; both views read the same model.
+  With Show all users' ports on, other users' ports (the netstat read) refresh every 5 seconds rather than every second, because they are system services that rarely change and reading them costs ten times a normal scan.
+- Resource use is a feature: a scan asks the kernel for the user's own processes in one call (`proc_listpids` by owner), and the model assigns state only when it changed, so an unchanged second redraws nothing.
 - A `FloatingWindowController` owns the one pop-out window: an `NSWindow` at the floating level that joins all Spaces and full-screen apps, with a transparent, full-size title bar.
   The menu bar count refreshes every 10 seconds while the panel is closed, a single cheap scan.
 - `UpdateChecker`: once a day, when enabled, it requests `https://api.github.com/repos/zewify/portglimpse/releases/latest` and compares the tag with the running version.
