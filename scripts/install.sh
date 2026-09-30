@@ -78,6 +78,14 @@ main() {
   version=$(grep -o '"tag_name": *"[^"]*"' "$tmp/release.json" | head -n 1 | sed 's/.*"v\{0,1\}\([^"]*\)"$/\1/')
   [ -n "$zip_url" ] && [ -n "$sum_url" ] || fail "the latest release has no download yet. Try again in a few minutes."
 
+  dest=$(install_dir)
+  installed=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$dest/$APP/Contents/Info.plist" 2>/dev/null || true)
+  if [ -n "$version" ] && [ "$installed" = "$version" ]; then
+    say "PortGlimpse $version is already installed in $dest, so there is nothing to update."
+    if [ "${PORTGLIMPSE_NO_LAUNCH:-}" != "1" ] && ! is_running; then launch_app "$dest/$APP"; fi
+    return 0
+  fi
+
   say "downloading PortGlimpse $version"
   curl -fsSL "$zip_url" -o "$tmp/app.zip" || fail "the download failed. Try again."
   curl -fsSL "$sum_url" -o "$tmp/app.zip.sha256" || fail "the checksum download failed. Try again."
@@ -88,7 +96,6 @@ main() {
   ditto -x -k "$tmp/app.zip" "$tmp/unpacked" || fail "the download could not be unpacked."
   [ -d "$tmp/unpacked/$APP" ] || fail "the download does not contain $APP."
 
-  dest=$(install_dir)
   mkdir -p "$dest"
   if [ "${PORTGLIMPSE_NO_LAUNCH:-}" != "1" ] && is_running; then
     say "quitting PortGlimpse to update it"

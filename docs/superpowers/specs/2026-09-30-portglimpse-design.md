@@ -189,6 +189,7 @@ A release's notes carry `docs/releases/<version>.md` under "What's new" when tha
 2. Downloads the zip and checks its SHA-256, refusing to install on a mismatch.
 3. Picks where to install: an update goes where the app already is — the running copy's folder when that is inside an Applications folder (never a build folder), else an existing copy in `/Applications` or `~/Applications`.
    A first install goes to `/Applications` when writable (admin accounts can write there without `sudo`), else to `~/Applications`.
+   If that copy is already the latest version, it says so and stops there — nothing downloaded, quit or replaced — and opens the app if it isn't running.
 4. If PortGlimpse is running, quits it by bundle ID and waits up to five seconds; if it won't quit, it stops and changes nothing.
 5. Swaps the new copy in, then launches it.
 

@@ -149,6 +149,20 @@ if quit_run 1 && [ "$(installed_version)" = 1.0.8 ] && [ "$(cat "$work/calls.txt
   pass "an app that isn't running is not asked to quit"
 else fail "not running: $(cat "$work/out.txt") / $(cat "$work/calls.txt")"; fi
 
+# Already up to date: nothing is downloaded, quit or replaced; a copy that isn't running is opened.
+touch -t 202001010000 "$work/Apps/PortGlimpse.app/Contents/Info.plist"
+rm -f "$work/state/running"; : > "$work/calls.txt"
+if quit_run 1 && grep -q "1.0.8 is already installed" "$work/out.txt" && ! grep -q downloading "$work/out.txt" \
+  && [ "$(stat -f %Sm -t %Y "$work/Apps/PortGlimpse.app/Contents/Info.plist")" = 2020 ] \
+  && [ "$(cat "$work/calls.txt")" = "$(printf 'launch %s, installed 1.0.8' "$work/Apps/PortGlimpse.app")" ]; then
+  pass "up to date and not running: left alone and opened"
+else fail "up to date, not running: $(cat "$work/out.txt") / $(cat "$work/calls.txt")"; fi
+touch "$work/state/running"; : > "$work/calls.txt"
+if quit_run 1 && grep -q "already installed" "$work/out.txt" && [ ! -s "$work/calls.txt" ]; then
+  pass "up to date and running: not quit, not reopened"
+else fail "up to date, running: $(cat "$work/out.txt") / $(cat "$work/calls.txt")"; fi
+rm -f "$work/state/running"
+
 # The documented form: the script arrives on standard input, as with curl … | sh.
 release 1.0.9
 if curl -fsSL "file://$INSTALL" | PORTGLIMPSE_API="http://127.0.0.1:$port/release.json" PORTGLIMPSE_INSTALL_DIR="$work/Apps" PORTGLIMPSE_NO_LAUNCH=1 sh >"$work/out.txt" 2>&1 \
