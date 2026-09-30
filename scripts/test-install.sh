@@ -28,9 +28,11 @@ release() { # version [bad-sum] [no-assets]
   local sum; sum=$(shasum -a 256 "$work/site/PortGlimpse-$version.zip" | cut -d' ' -f1)
   [ "${2:-}" = bad-sum ] && sum=0000000000000000000000000000000000000000000000000000000000000000
   printf '%s  PortGlimpse-%s.zip\n' "$sum" "$version" > "$work/site/PortGlimpse-$version.zip.sha256"
-  local assets="[{\"name\":\"PortGlimpse-$version.zip\",\"browser_download_url\":\"http://127.0.0.1:$port/PortGlimpse-$version.zip\"},{\"name\":\"PortGlimpse-$version.zip.sha256\",\"browser_download_url\":\"http://127.0.0.1:$port/PortGlimpse-$version.zip.sha256\"}]"
+  # Pretty-printed like GitHub's real response, with the checksum listed before the zip.
+  local assets
+  assets=$(printf '[\n    {\n      "name": "PortGlimpse-%s.zip.sha256",\n      "browser_download_url": "http://127.0.0.1:%s/PortGlimpse-%s.zip.sha256"\n    },\n    {\n      "name": "PortGlimpse-%s.zip",\n      "browser_download_url": "http://127.0.0.1:%s/PortGlimpse-%s.zip"\n    }\n  ]' "$version" "$port" "$version" "$version" "$port" "$version")
   [ "${3:-}" = no-assets ] && assets="[]"
-  printf '{"tag_name":"v%s","name":"PortGlimpse %s","assets":%s}' "$version" "$version" "$assets" > "$work/site/release.json"
+  printf '{\n  "tag_name": "v%s",\n  "name": "PortGlimpse %s",\n  "assets": %s\n}\n' "$version" "$version" "$assets" > "$work/site/release.json"
 }
 
 run_install() { PORTGLIMPSE_API="http://127.0.0.1:$port/release.json" PORTGLIMPSE_INSTALL_DIR="$work/Apps" PORTGLIMPSE_NO_LAUNCH=1 sh "$INSTALL" >"$work/out.txt" 2>&1; }
@@ -49,6 +51,18 @@ if ! run_install && [ "$(installed_version)" = 1.0.1 ] && grep -q "checksum" "$w
 # Review Focus 2: a release without assets fails clearly.
 release 1.0.3 "" no-assets
 if ! run_install && [ "$(installed_version)" = 1.0.1 ] && grep -q "no download" "$work/out.txt"; then pass "release without assets refused"; else fail "no assets: $(cat "$work/out.txt")"; fi
+
+# Review Focus 1: a download cut short, served with the full file's checksum, is refused.
+release 1.0.4
+full=$(wc -c < "$work/site/PortGlimpse-1.0.4.zip"); head -c $((full / 2)) "$work/site/PortGlimpse-1.0.4.zip" > "$work/site/cut.zip" && mv "$work/site/cut.zip" "$work/site/PortGlimpse-1.0.4.zip"
+if ! run_install && [ "$(installed_version)" = 1.0.1 ]; then pass "truncated download refused, app untouched"; else fail "truncated: $(cat "$work/out.txt")"; fi
+
+# An old copy that cannot be fully deleted still gets replaced, and the run says what it left behind.
+chmod 555 "$work/Apps/PortGlimpse.app/Contents"
+release 1.0.5
+if run_install && [ "$(installed_version)" = 1.0.5 ]; then pass "stubborn old copy replaced"; else fail "stubborn old copy: $(cat "$work/out.txt")"; fi
+chmod -R 755 "$work/Apps" 2>/dev/null || true
+rm -rf "$work/Apps/.PortGlimpse.app.old"
 
 # An unreachable API fails clearly.
 if ! PORTGLIMPSE_API="http://127.0.0.1:1/nothing" PORTGLIMPSE_INSTALL_DIR="$work/Apps" PORTGLIMPSE_NO_LAUNCH=1 sh "$INSTALL" >"$work/out.txt" 2>&1 && grep -q "couldn't reach" "$work/out.txt"; then pass "unreachable API refused"; else fail "unreachable: $(cat "$work/out.txt")"; fi

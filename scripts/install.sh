@@ -27,13 +27,16 @@ main() {
   [ "$major" -ge 14 ] || fail "PortGlimpse needs macOS 14 or later."
 
   tmp=$(mktemp -d)
-  trap 'rm -rf "$tmp"' EXIT INT TERM
+  # Clean up on every exit, and make Ctrl-C or a kill actually stop the script.
+  trap 'rm -rf "$tmp"' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
 
   say "finding the latest release"
   curl -fsSL -H "Accept: application/vnd.github+json" "$API" -o "$tmp/release.json" 2>/dev/null \
     || fail "couldn't reach GitHub. Check your connection and try again."
-  zip_url=$(grep -o '"browser_download_url": *"[^"]*\.zip"' "$tmp/release.json" | head -n 1 | sed 's/.*"\([^"]*\)"$/\1/')
-  sum_url=$(grep -o '"browser_download_url": *"[^"]*\.zip\.sha256"' "$tmp/release.json" | head -n 1 | sed 's/.*"\([^"]*\)"$/\1/')
+  zip_url=$(grep -o '"browser_download_url": *"[^"]*/PortGlimpse-[^"/]*\.zip"' "$tmp/release.json" | head -n 1 | sed 's/.*"\([^"]*\)"$/\1/')
+  sum_url=$(grep -o '"browser_download_url": *"[^"]*/PortGlimpse-[^"/]*\.zip\.sha256"' "$tmp/release.json" | head -n 1 | sed 's/.*"\([^"]*\)"$/\1/')
   version=$(grep -o '"tag_name": *"[^"]*"' "$tmp/release.json" | head -n 1 | sed 's/.*"v\{0,1\}\([^"]*\)"$/\1/')
   [ -n "$zip_url" ] && [ -n "$sum_url" ] || fail "the latest release has no download yet. Try again in a few minutes."
 
@@ -51,13 +54,25 @@ main() {
   mkdir -p "$dest"
   if [ "${PORTGLIMPSE_NO_LAUNCH:-}" != "1" ]; then
     osascript -e 'quit app "PortGlimpse"' >/dev/null 2>&1 || true
-    for _ in 1 2 3 4 5 6 7 8 9 10; do pgrep -x PortGlimpse >/dev/null 2>&1 || break; sleep 0.5; done
+    for _ in 1 2 3 4 5 6 7 8 9 10; do pgrep -xu "$(id -u)" PortGlimpse >/dev/null 2>&1 || break; sleep 0.5; done
+    ! pgrep -xu "$(id -u)" PortGlimpse >/dev/null 2>&1 || fail "PortGlimpse didn't quit. Quit it from its panel, then run this again."
   fi
-  # Copy beside the old app first, then swap, so a failure never leaves no app at all.
-  rm -rf "$dest/.$APP.new"
-  ditto "$tmp/unpacked/$APP" "$dest/.$APP.new" || fail "couldn't write to $dest."
-  rm -rf "$dest/$APP"
-  mv "$dest/.$APP.new" "$dest/$APP"
+  # Copy the new app in beside the old one, move the old one aside, then move the new one into place.
+  # Each step is a rename within one folder, and a failure puts the old copy back, so there is always an app.
+  new="$dest/.$APP.new"
+  old="$dest/.$APP.old"
+  rm -rf "$new" "$old" 2>/dev/null || true
+  ditto "$tmp/unpacked/$APP" "$new" || { rm -rf "$new" 2>/dev/null; fail "couldn't write to $dest."; }
+  if [ -e "$dest/$APP" ]; then
+    mv "$dest/$APP" "$old" || { rm -rf "$new" 2>/dev/null; fail "couldn't move the installed copy aside in $dest, so nothing changed."; }
+  fi
+  if ! mv "$new" "$dest/$APP"; then
+    [ -e "$old" ] && mv "$old" "$dest/$APP"
+    fail "couldn't finish installing in $dest; the previous copy is back in place."
+  fi
+  if [ -e "$old" ]; then
+    rm -rf "$old" 2>/dev/null || say "the previous copy couldn't be fully removed; delete $old when you like."
+  fi
 
   say "installed $version in $dest"
   if [ "${PORTGLIMPSE_NO_LAUNCH:-}" != "1" ]; then

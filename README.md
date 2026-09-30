@@ -34,4 +34,8 @@ It sends nothing anywhere; the only network request is an optional daily check f
 
 ## Licence
 
+PortGlimpse is source available, not open source.
+The source is published so you can read exactly what the app does, and build it for yourself.
+Zewify keeps all rights to it; no licence to copy, modify or redistribute it is granted.
+
 The bundled fonts — Bricolage Grotesque, Figtree and IBM Plex Mono — are under the SIL Open Font License; their licences are in `App/Resources/Fonts`.

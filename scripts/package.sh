@@ -4,7 +4,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 version=$(sed -n 's/^ *MARKETING_VERSION: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' project.yml | head -n 1)
 app="$(./scripts/build.sh Release | tail -1)"
-lipo -archs "$app/Contents/MacOS/PortGlimpse" | grep -q x86_64 || { echo "Not a universal binary" >&2; exit 1; }
+archs=$(lipo -archs "$app/Contents/MacOS/PortGlimpse")
+for arch in arm64 x86_64; do echo "$archs" | grep -qw "$arch" || { echo "Not a universal binary: $archs" >&2; exit 1; }; done
 out=build/release
 rm -rf "$out"; mkdir -p "$out"
 zip="PortGlimpse-$version.zip"
