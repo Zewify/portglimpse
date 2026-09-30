@@ -1,12 +1,12 @@
-# Port Peek — design
+# PortGlimpse — design
 
 Date: 2026-09-30.
 Status: approved in conversation, awaiting review of this written spec.
-Visual design: the "Port Peek menu" canvas at https://claude.ai/artifact/3FWxVQjj2aQJy6uZsGpBg2 (private to the owner), boards "Menu panel", "Row states" and "Menu bar icon options".
+Visual design: the "PortGlimpse menu" canvas at https://claude.ai/artifact/3FWxVQjj2aQJy6uZsGpBg2 (private to the owner), boards "Menu panel", "Row states", "Menu bar icon options" and "Pop-out window".
 
 ## Purpose
 
-Port Peek is a free Mac menu bar app that answers "what is listening on this port, which project is it, and can I stop it" without `lsof -i :3000` and `kill -9`.
+PortGlimpse is a free Mac menu bar app that answers "what is listening on this port, which project is it, and can I stop it" without `lsof -i :3000` and `kill -9`.
 It is for developers, and it is a Zewify product.
 Success means a developer can find and stop a stale dev server in two clicks and one confirmation, and can tell five `node` processes apart by their project folder.
 
@@ -14,7 +14,7 @@ Success means a developer can find and stop a stale dev server in two clicks and
 
 - Free, with no in-app purchase and no Pro tier.
 - Distributed outside the Mac App Store, as a notarized download installed and updated with one `curl` command.
-- The source is public at `github.com/zewify/portpeek`.
+- The source is public at `github.com/zewify/portglimpse`.
 - It is a viewer with a kill button, never a process manager: no starting, restarting, logs or remote machines.
 - Kill always asks for confirmation first.
 
@@ -75,6 +75,26 @@ A right-click override beats the rule.
 The probe's real results are the reference cases: `node`, `bun`, `mysqld` and `redis-server` are dev servers; DBeaver, `figma_agent`, Google Drive, ControlCenter and `rapportd` are Apps & system; `launchd` and Tailscale are Other users.
 Known gaps, accepted for 1.0: Postgres.app and Docker containers land in Apps & system until overridden.
 
+### Pop-out window
+
+A button in the panel header ("Open in a window") opens the same list in a window of its own, and the panel closes.
+The button brings the window forward when it is already open; there is never more than one.
+
+- It always stays on top of other windows, on every desktop (Space) and over full-screen apps, like picture-in-picture.
+- Because it is always on top it needs no Dock icon, and PortGlimpse stays out of the Dock and ⌘-Tab.
+- Its header is PortGlimpse's dark header with the window's close, minimise and zoom buttons inside it, and no grey title bar; it is dragged by that header.
+- It holds the same sections, rows, kill flow, right-click overrides and footer as the panel, and refreshes every second while open.
+- Its default size is 420 × 480 and its minimum 300 × 240; it remembers its size and position, and starts closed on each launch.
+- ⌘W or its close button closes it; PortGlimpse keeps running in the menu bar.
+
+It adapts to its width.
+
+- From 360 points wide, rows are identical to the panel's.
+- Below 360 points, rows are compact: port and command only, with the folder in a tooltip, and only the Kill icon on hover.
+- In compact rows the kill question wraps onto its own line above Cancel and Kill.
+- At every width, Open in browser, Copy PID and Reveal in Finder are also in the row's right-click menu.
+- The list scrolls within whatever height the window has.
+
 ### Menu bar icon
 
 The icon is the "colon keycap": a rounded-square key outline with a colon inside, drawn as a template image so macOS tints it for the menu bar.
@@ -102,7 +122,7 @@ The amber gradient appears only on the Kill and Force kill buttons; dev port lab
 
 The layout mirrors TickThock: Swift 6, SwiftUI, XcodeGen (`project.yml`, with the generated `.xcodeproj` gitignored), and a thin app over a Swift package.
 
-### `PortPeekCore` (Swift package, no AppKit)
+### `PortGlimpseCore` (Swift package, no AppKit)
 
 Each unit below has one job and is tested on its own.
 
@@ -121,10 +141,11 @@ Each unit below has one job and is tested on its own.
 
 ### The app
 
-- `PortPeekApp`: `MenuBarExtra` with the icon and count, the panel view and the Settings submenu.
-- A `PanelModel` polls `Snapshot` once a second while the panel is open and stops polling when it closes.
+- `PortGlimpseApp`: `MenuBarExtra` with the icon and count, the panel view and the Settings submenu.
+- A `PanelModel` polls `Snapshot` once a second while the panel or the pop-out window is showing, and stops when neither is; both views read the same model.
+- A `FloatingWindowController` owns the one pop-out window: an `NSWindow` at the floating level that joins all Spaces and full-screen apps, with a transparent, full-size title bar.
   The menu bar count refreshes every 10 seconds while the panel is closed, a single cheap scan.
-- `UpdateChecker`: once a day, when enabled, it requests `https://api.github.com/repos/zewify/portpeek/releases/latest` and compares the tag with the running version.
+- `UpdateChecker`: once a day, when enabled, it requests `https://api.github.com/repos/zewify/portglimpse/releases/latest` and compares the tag with the running version.
   A newer release adds an "Update available: <version>" row to the footer whose button copies the install command.
   Network failures are silent.
 
@@ -143,11 +164,11 @@ Signing secrets live in repository secrets: the certificate as a base64 `.p12` w
 
 ### Install and update
 
-`curl -fsSL https://zewify.com/portpeek/install.sh | sh`:
+`curl -fsSL https://zewify.com/portglimpse/install.sh | sh`:
 
 1. Finds the latest release through the GitHub API.
 2. Downloads the zip and checks its SHA-256.
-3. Quits a running Port Peek, then installs to `/Applications` when writable (admin accounts can write there without `sudo`), else to `~/Applications`.
+3. Quits a running PortGlimpse, then installs to `/Applications` when writable (admin accounts can write there without `sudo`), else to `~/Applications`.
 4. Launches it.
 
 Running the same command again is the update.
@@ -156,8 +177,8 @@ Uninstalling is documented on the site: turn off Launch at login, quit, then del
 
 ### Website
 
-The zewify repo gains a `/portpeek/` product page built like `/tickthock/`, and serves `install.sh` at `/portpeek/install.sh`.
-It explains install, update, uninstall and what Port Peek can and cannot see, and links to the GitHub repo.
+The zewify repo gains a `/portglimpse/` product page built like `/tickthock/`, and serves `install.sh` at `/portglimpse/install.sh`.
+It explains install, update, uninstall and what PortGlimpse can and cannot see, and links to the GitHub repo.
 All printed facts (version, minimum macOS, repo URL) live in that page's data file, as `src/data/site.ts` does for the others.
 The page must pass the existing `tests/dist.test.mjs` identity denylist.
 
@@ -168,7 +189,7 @@ The page must pass the existing `tests/dist.test.mjs` identity denylist.
 - Commits are authored as `Zewify <335855398+Zewify@users.noreply.github.com>`, set in the repo's own git config.
 - Releases are published by GitHub Actions.
 - Issues are disabled; the website names the contact route.
-- The app bundle ID is `com.zewify.portpeek`, and nothing in the app, repo or site names a person.
+- The app bundle ID is `com.zewify.portglimpse`, and nothing in the app, repo or site names a person.
 - A known residual: pushes appear in the pushing account's public GitHub activity feed.
 
 ## Platform
@@ -188,7 +209,7 @@ macOS 14 or later, matching TickThock, on Apple silicon and Intel as a universal
 
 - Create a Developer ID Application certificate for team `GHVX6RBQ64`.
 - Create an App Store Connect API key for notarization.
-- Create the `zewify/portpeek` repo, public, with issues disabled.
+- Create the `zewify/portglimpse` repo, public, with issues disabled.
 
 ## Out of scope for 1.0
 
