@@ -11,6 +11,6 @@ let package = Package(
         // Every rule the app follows: scanning, inspecting, labelling, classifying,
         // overrides, the kill flow and version comparison. Foundation and Darwin only.
         .target(name: "PortGlimpseCore"),
-        .testTarget(name: "PortGlimpseCoreTests", dependencies: ["PortGlimpseCore"]),
+        .testTarget(name: "PortGlimpseCoreTests", dependencies: ["PortGlimpseCore"], resources: [.copy("Fixtures")]),
     ]
 )
