@@ -71,6 +71,14 @@ struct TerminatorTests {
         #expect(process.signals.isEmpty)
     }
 
+    @Test func nonPositivePidsAreNeverSignalled() async {
+        let process = FakeProcess()
+        #expect(await process.terminator().stop(0) == .failed("It has already exited."))
+        #expect(await process.terminator().stop(-1) == .failed("It has already exited."))
+        #expect(await process.terminator().forceKill(-1) == .failed("It has already exited."))
+        #expect(process.signals.isEmpty)
+    }
+
     @Test func aProcessThatVanishesMidSignalReportsExited() async {
         let process = FakeProcess(sendError: ESRCH)
         #expect(await process.terminator().stop(42) == .failed("It has already exited."))
@@ -101,7 +109,8 @@ struct LiveTerminatorTests {
         #expect(await terminator.forceKill(server.pid) == .stopped)
     }
 
-    @Test func refusesLaunchd() async {
+    @Test(.disabled(if: getuid() == 0, "Signalling PID 1 as root would stop launchd"))
+    func refusesLaunchd() async {
         #expect(await Terminator.live().stop(1) == .failed("It belongs to another user."))
     }
 }

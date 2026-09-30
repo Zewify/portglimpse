@@ -55,6 +55,9 @@ public struct Terminator: Sendable {
     }
 
     func deliver(_ signal: Int32, to pid: Int32) async -> KillOutcome {
+        // kill(0, ...) signals a process group and kill(-1, ...) every process the user owns,
+        // so a non-positive pid must be impossible by construction, not only via the owner lookup.
+        guard pid > 0 else { return .failed("It has already exited.") }
         guard let owner = ownerOf(pid), isAlive(pid) else { return .failed("It has already exited.") }
         guard owner == currentUID else { return .failed("It belongs to another user.") }
         let error = send(pid, signal)
