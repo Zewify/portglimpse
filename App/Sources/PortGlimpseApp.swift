@@ -94,8 +94,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         loginItem.enableOnFirstLaunch()
     }
 
-    /// Opening the window makes it key, which dismisses the menu bar panel.
+    /// Opens the window and closes the menu bar panel.
+    /// The panel is closed the way a click on its icon closes it: closing or hiding its window directly
+    /// leaves MenuBarExtra believing it is still open, and the next click on the icon would do nothing.
     func popOut() {
         window.show()
+        Self.statusItemButton()?.performClick(nil)
+    }
+
+    private static func statusItemButton() -> NSButton? {
+        func button(in view: NSView) -> NSButton? {
+            if let found = view as? NSButton { return found }
+            for child in view.subviews { if let found = button(in: child) { return found } }
+            return nil
+        }
+        for window in NSApp.windows where String(describing: type(of: window)).contains("StatusBar") {
+            if let content = window.contentView, let found = button(in: content) { return found }
+        }
+        return nil
     }
 }

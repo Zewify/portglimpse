@@ -32,11 +32,7 @@ struct PanelView<Footer: View>: View {
         .frame(width: 408)
         .background(Theme.panel)
         .environment(\.colorScheme, .dark)
-        .background(PanelWindowObserver(onOpen: model.panelOpened, onClose: model.panelClosed, onEscape: {
-            let asking = model.rows.contains { [.confirming, .stillRunning].contains(model.phase(of: $0)) }
-            model.cancelConfirmations()
-            return asking
-        }))
+        .background(PanelWindowObserver(onOpen: model.panelOpened, onClose: model.panelClosed, onEscape: model.withdrawQuestion))
     }
 
     private var header: some View {

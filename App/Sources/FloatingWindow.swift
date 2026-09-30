@@ -12,6 +12,8 @@ final class FloatingWindowController: NSObject, NSWindowDelegate {
     private let model: PanelModel
     private let content: @MainActor () -> AnyView
     private var window: NSWindow?
+    /// True while the window counts as a viewer; a minimised window does not, so its refresh pauses.
+    private var isViewing = false
 
     init(model: PanelModel, content: @escaping @MainActor () -> AnyView) {
         self.model = model
@@ -21,8 +23,10 @@ final class FloatingWindowController: NSObject, NSWindowDelegate {
     /// Opens the window, or brings the open one forward; there is never more than one.
     func show() {
         if let window {
+            if window.isMiniaturized { window.deminiaturize(nil) }
             window.orderFrontRegardless()
             window.makeKey()
+            NSApp.activate()
             return
         }
         let window = NSWindow(
@@ -49,6 +53,7 @@ final class FloatingWindowController: NSObject, NSWindowDelegate {
         if !window.setFrameUsingName(Self.autosaveName) { window.center() }
         window.setFrameAutosaveName(Self.autosaveName)
         self.window = window
+        isViewing = true
         model.viewerAppeared()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate()
@@ -58,9 +63,22 @@ final class FloatingWindowController: NSObject, NSWindowDelegate {
         NSSize(width: max(frameSize.width, Self.minimumSize.width), height: max(frameSize.height, Self.minimumSize.height))
     }
 
+    func windowDidMiniaturize(_ notification: Notification) {
+        guard isViewing else { return }
+        isViewing = false
+        model.viewerDisappeared()
+    }
+
+    func windowDidDeminiaturize(_ notification: Notification) {
+        guard !isViewing else { return }
+        isViewing = true
+        model.viewerAppeared()
+    }
+
     func windowWillClose(_ notification: Notification) {
         model.cancelConfirmations()
-        model.viewerDisappeared()
+        if isViewing { model.viewerDisappeared() }
+        isViewing = false
         window = nil
     }
 }

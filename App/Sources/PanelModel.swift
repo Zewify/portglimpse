@@ -130,6 +130,13 @@ final class PanelModel {
 
     func cancel(_ row: Row) { phases[row.pid] = nil }
 
+    /// Escape's action: withdraws any question showing and reports whether there was one, so the key is consumed only then.
+    func withdrawQuestion() -> Bool {
+        let asking = rows.contains { [.confirming, .stillRunning].contains(phase(of: $0)) }
+        cancelConfirmations()
+        return asking
+    }
+
     func cancelConfirmations() {
         phases = phases.filter { $0.value != .confirming && $0.value != .stillRunning }
     }

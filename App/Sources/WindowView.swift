@@ -32,11 +32,7 @@ struct WindowView<Footer: View>: View {
         .ignoresSafeArea(.container, edges: .top)
         // Escape withdraws a question, through the same key monitor the panel uses;
         // onKeyPress never fires here because nothing holds focus.
-        .background(PanelWindowObserver(onEscape: {
-            let asking = model.rows.contains { [.confirming, .stillRunning].contains(model.phase(of: $0)) }
-            model.cancelConfirmations()
-            return asking
-        }))
+        .background(PanelWindowObserver(onEscape: model.withdrawQuestion))
     }
 
     /// The traffic lights sit over the leading 78 points; the text ignores clicks so the drag handle gets them.
