@@ -27,6 +27,20 @@ You need Xcode and XcodeGen (`brew install xcodegen`).
 - `./scripts/test.sh` runs the tests and builds the app.
 - `./scripts/install-local.sh` builds a Release copy into `/Applications` and opens it.
 
+## Resource use
+
+PortGlimpse is built to cost next to nothing while it sits in the menu bar.
+Measured on 1 October 2026 on an Apple M4 Mac mini with macOS 26.5 and 9 of the user's own processes listening, with the 1.0.0 release:
+
+| State | CPU (share of one core) | Memory |
+|---|---|---|
+| Panel and window closed | 0.05 % | 16 MB |
+| Panel open | 0.5 % | about 26 MB |
+
+CPU is the CPU time the process used over a window (120 s closed, 60 s open) divided by that window, read with `ps -o time=`; memory is `footprint`'s `phys_footprint`.
+With the panel closed it scans once every 10 seconds, only to keep the count in the menu bar; open, it scans once a second, and other users' ports (Show all) every 5 seconds.
+One scan of the user's own ports takes about 1 ms of CPU, because the kernel lists only that user's processes in one call.
+
 ## Privacy
 
 PortGlimpse reads the list of listening ports and process details from macOS on your Mac.
