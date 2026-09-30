@@ -47,7 +47,6 @@ struct WindowView<Footer: View>: View {
                 .foregroundStyle(Theme.text)
                 .lineLimit(1)
             Spacer(minLength: 8)
-            LiveBadge(showsLabel: !compact)
         }
         .allowsHitTesting(false)
         .padding(.leading, 78)

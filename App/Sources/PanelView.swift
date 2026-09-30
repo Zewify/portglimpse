@@ -50,7 +50,6 @@ struct PanelView<Footer: View>: View {
         HStack(spacing: 6) {
             Text("PortGlimpse").font(Theme.title(18)).tracking(-0.5).foregroundStyle(Theme.text)
             Spacer()
-            LiveBadge()
             if let onPopOut {
                 IconButton(symbol: "macwindow.on.rectangle", label: "Open in a window", action: onPopOut)
             }
@@ -58,23 +57,6 @@ struct PanelView<Footer: View>: View {
         .padding(.leading, 18)
         .padding(.trailing, 10)
         .frame(height: 46)
-    }
-}
-
-/// The amber "Live" dot shown in both headers.
-struct LiveBadge: View {
-    var showsLabel = true
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Circle().fill(Theme.amber).frame(width: 7, height: 7)
-                .background(Circle().fill(Theme.amber.opacity(0.18)).frame(width: 13, height: 13))
-            if showsLabel {
-                Text("Live").font(Theme.body(12, .semibold)).foregroundStyle(Theme.muted)
-            }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Updating live")
     }
 }
 
