@@ -24,3 +24,5 @@ Plan: `docs/superpowers/plans/2026-09-30-portglimpse-app.md`.
 - The Core never imports AppKit or SwiftUI.
 - Never run `lsof`; "Show all" reads `/usr/sbin/netstat -anv -p tcp`.
 - The Core refuses to signal a process owned by another user, whatever the UI asks.
+- The menu bar panel's open and close come from its window's key status (`PanelWindowObserver`), because a window-style `MenuBarExtra` keeps its view alive between openings.
+- Distribution (Developer ID signing, notarization, `install.sh`, the zewify.com page) is the second plan and is not built yet.
