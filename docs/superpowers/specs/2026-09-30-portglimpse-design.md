@@ -95,11 +95,18 @@ It adapts to its width.
 - At every width, Open in browser, Copy PID and Reveal in Finder are also in the row's right-click menu.
 - The list scrolls within whatever height the window has.
 
-### Menu bar icon
+### Icon
 
-The icon is TickThock's dark tile (`#221e1b`) with the amber colon (`#f48e48`) from every port label, drawn in full colour at 18 points so it sits beside TickThock's icon as a sibling (final choice, 2026-09-30, after trying the white template outline, the full app-icon tile and an amber outline).
-Next to it is the number of dev servers; with none, the icon fades to 40 % and shows no number.
-The count can be hidden in Settings.
+PortGlimpse has one mark everywhere: TickThock's dark tile (`#221e1b`) with the amber colon (`#f48e48`) from every port label — option #4, "Amber colon on tile", on the canvas's "Menu bar icon options" board (final, 2026-10-01).
+It replaced the first app icon, an amber keycap with a dark colon, so the app, its menu bar item and its website all show the same thing.
+
+- **Menu bar:** drawn in full colour at 18 points (`MenuBarIcon`), so it sits beside TickThock's icon as a sibling; chosen on 2026-09-30 after trying the white template outline, the full app-icon tile and an amber outline.
+  Next to it is the number of dev servers; with none, the icon fades to 40 % and shows no number.
+  The count can be hidden in Settings.
+- **App icon:** the same mark on the macOS icon grid, rendered by `scripts/make-icon.swift`: an 824-point tile inset 100 in the 1024 canvas, and the menu bar icon's proportions scaled up — dots 164 across, 146 either side of centre.
+  The colon is flat amber with no gradient or keycap, exactly as in the menu bar.
+- **Website:** zewify.com's PortGlimpse pages (favicon, touch icon, logo, share image) and its home-page card use the same mark, from a vector copy of this geometry in the zewify repo.
+  A change to the mark changes all three places together.
 
 ### Settings
 

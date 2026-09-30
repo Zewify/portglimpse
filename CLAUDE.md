@@ -14,7 +14,7 @@ Plan: `docs/superpowers/plans/2026-09-30-portglimpse-app.md`.
 - `./scripts/test.sh` — core tests, then an app build. Run before every commit; the exit code is the verdict.
 - `./scripts/build.sh [Debug|Release]` — generates the project and builds; prints the app path.
 - `./scripts/install-local.sh` — a Release build copied to `/Applications` and launched.
-- `swift scripts/make-icon.swift App/Resources/Assets.xcassets/AppIcon.appiconset` — re-renders the app icon.
+- `swift scripts/make-icon.swift App/Resources/Assets.xcassets/AppIcon.appiconset` — re-renders the app icon: the amber colon on the dark tile, the same mark as the menu bar icon (spec, "Icon"); zewify.com's PortGlimpse icons copy it, so change them together.
 - `project.yml` is the XcodeGen spec; the `.xcodeproj` is generated and gitignored, so never edit or commit it.
 
 ## Rules that are not obvious

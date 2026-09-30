@@ -1,4 +1,4 @@
-// Renders AppIcon.appiconset: an amber keycap with a colon on TickThock's dark tile.
+// Renders AppIcon.appiconset: the amber colon on TickThock's dark tile, the menu bar icon at app icon size.
 // Usage: swift scripts/make-icon.swift App/Resources/Assets.xcassets/AppIcon.appiconset
 import AppKit
 
@@ -18,20 +18,11 @@ func render(pixels: Int) -> Data {
     ctx.addPath(CGPath(roundedRect: CGRect(x: 100, y: 100, width: 824, height: 824), cornerWidth: 185, cornerHeight: 185, transform: nil))
     ctx.setFillColor(color(0x221E1B))
     ctx.fillPath()
-    // The key's darker skirt, then its face on top; the skirt shows as a band along the bottom.
-    ctx.addPath(CGPath(roundedRect: CGRect(x: 262, y: 238, width: 500, height: 520), cornerWidth: 110, cornerHeight: 110, transform: nil))
-    ctx.setFillColor(color(0xB9531A))
-    ctx.fillPath()
-    ctx.saveGState()
-    ctx.addPath(CGPath(roundedRect: CGRect(x: 262, y: 290, width: 500, height: 468), cornerWidth: 110, cornerHeight: 110, transform: nil))
-    ctx.clip()
-    let face = CGGradient(colorsSpace: space, colors: [color(0xFFB067), color(0xEE8237)] as CFArray, locations: [0, 1])!
-    ctx.drawLinearGradient(face, start: CGPoint(x: 512, y: 758), end: CGPoint(x: 512, y: 290), options: [])
-    ctx.restoreGState()
-    // The colon.
-    ctx.setFillColor(color(0x1B1815))
-    for centre in [CGFloat(434), 614] {
-        ctx.fillEllipse(in: CGRect(x: 512 - 44, y: centre - 44, width: 88, height: 88))
+    // The colon, in the menu bar icon's proportions (MenuBarIcon: 3.6-point dots 3.2 points
+    // either side of centre on an 18-point tile), scaled to the 824-point tile.
+    ctx.setFillColor(color(0xF48E48))
+    for centre: CGFloat in [512 - 146, 512 + 146] {
+        ctx.fillEllipse(in: CGRect(x: 512 - 82, y: centre - 82, width: 164, height: 164))
     }
     let bitmap = NSBitmapImageRep(cgImage: ctx.makeImage()!)
     return bitmap.representation(using: .png, properties: [:])!
