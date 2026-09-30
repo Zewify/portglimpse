@@ -28,7 +28,14 @@ public enum ProcessInspector {
     }
 
     public static func userName(for uid: UInt32) -> String {
-        guard let entry = getpwuid(uid), let name = entry.pointee.pw_name else { return String(uid) }
+        // `getpwuid` returns process-global storage, and scans run concurrently, so use the reentrant form.
+        let suggested = sysconf(_SC_GETPW_R_SIZE_MAX)
+        var buffer = [CChar](repeating: 0, count: suggested > 0 ? suggested : 4096)
+        var entry = passwd()
+        var result: UnsafeMutablePointer<passwd>?
+        guard getpwuid_r(uid, &entry, &buffer, buffer.count, &result) == 0, result != nil, let name = entry.pw_name else {
+            return String(uid)
+        }
         return String(cString: name)
     }
 
@@ -43,7 +50,9 @@ public enum ProcessInspector {
     static func executablePath(of pid: Int32) -> String? {
         var buffer = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
         let length = proc_pidpath(pid, &buffer, UInt32(buffer.count))
-        return length > 0 ? String(cString: buffer) : nil
+        guard length > 0 else { return nil }
+        let bytes = buffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }
+        return String(decoding: bytes, as: UTF8.self)
     }
 
     static func workingDirectory(of pid: Int32) -> String? {
