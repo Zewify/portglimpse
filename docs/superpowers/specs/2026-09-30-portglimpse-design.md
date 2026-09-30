@@ -176,17 +176,21 @@ Adding a Developer ID later changes neither the install command nor anything a u
 ### Releases
 
 A version tag (`v1.0.0`) runs a GitHub Actions workflow on a macOS runner.
-It checks the tag equals `MARKETING_VERSION` in `project.yml`, runs `./scripts/test.sh`, builds Release as a universal binary, zips `PortGlimpse.app` with `ditto` as `PortGlimpse-<version>.zip`, writes its SHA-256 beside it as `PortGlimpse-<version>.zip.sha256`, and publishes both to GitHub Releases as `github-actions[bot]`.
+It refuses a tag whose commit is not on `main`, runs one release at a time, checks the tag equals `MARKETING_VERSION` in `project.yml`, runs `./scripts/test.sh`, builds Release as a universal binary, zips `PortGlimpse.app` with `ditto` as `PortGlimpse-<version>.zip`, writes its SHA-256 beside it as `PortGlimpse-<version>.zip.sha256`, and publishes both to GitHub Releases as `github-actions[bot]`.
 A second workflow runs the tests on every push to `main`.
+A release's notes carry `docs/releases/<version>.md` under "What's new" when that file exists.
 
 ### Install and update
 
 `curl -fsSL https://zewify.com/portglimpse/install.sh | sh`:
 
 1. Finds the latest release through the GitHub API.
+   GitHub allows 60 unsigned API calls an hour per network; when that runs out, the script says so and how many minutes to wait, rather than reporting a lost connection.
 2. Downloads the zip and checks its SHA-256, refusing to install on a mismatch.
-3. Quits a running PortGlimpse, then installs to `/Applications` when writable (admin accounts can write there without `sudo`), else to `~/Applications`.
-4. Launches it.
+3. Picks where to install: an update goes where the app already is — the running copy's folder when that is inside an Applications folder (never a build folder), else an existing copy in `/Applications` or `~/Applications`.
+   A first install goes to `/Applications` when writable (admin accounts can write there without `sudo`), else to `~/Applications`.
+4. If PortGlimpse is running, quits it by bundle ID and waits up to five seconds; if it won't quit, it stops and changes nothing.
+5. Swaps the new copy in, then launches it.
 
 Running the same command again is the update.
 The script is POSIX `sh`, idempotent, never uses `sudo`, leaves the installed app untouched when anything fails, and prints what it did.

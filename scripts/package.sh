@@ -21,4 +21,8 @@ curl -fsSL https://zewify.com/portglimpse/install.sh | sh
 Needs macOS 14 or later.
 This build is signed ad hoc, so it is meant to be installed with the command above rather than opened from a browser download.
 EOF
+# What's new, when this version has notes of its own.
+if [ -f "docs/releases/$version.md" ]; then
+  { printf '\n## What'"'"'s new\n\n'; cat "docs/releases/$version.md"; } >> "$out/notes.md"
+fi
 echo "$out/$zip"

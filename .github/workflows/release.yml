@@ -4,11 +4,24 @@ on:
     tags: ['v*']
 permissions:
   contents: write
+# One release at a time, so two tags pushed together cannot race to be "Latest"; a second one waits
+# (GitHub keeps only one waiting run per group, so push tags one by one).
+concurrency:
+  group: release
+  cancel-in-progress: false
 jobs:
   release:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check the tag is on main
+        # A tag on an unmerged branch would publish code that main doesn't have.
+        run: |
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD \
+            || { echo "$GITHUB_REF_NAME points at a commit that is not on main; tag a commit on main instead." >&2; exit 1; }
       - name: Check the tag matches the app version
         run: ./scripts/check-version.sh "$GITHUB_REF_NAME"
       - name: Use the newest stable Xcode

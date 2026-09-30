@@ -11,7 +11,31 @@ trap cleanup EXIT
 
 port=$(python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
 mkdir -p "$work/site"
-(cd "$work/site" && exec python3 -m http.server "$port" --bind 127.0.0.1 >/dev/null 2>&1) &
+# A static server that can also play GitHub refusing the API call: a file named
+# "api-status" in the site makes /release.json answer with that status, and 403
+# carries GitHub's rate-limit message and reset time (half an hour from now).
+cat > "$work/server.py" <<'PY'
+import http.server, json, os, sys, time
+class Handler(http.server.SimpleHTTPRequestHandler):
+    def log_message(self, *args): pass
+    def do_GET(self):
+        flag = os.path.join(os.getcwd(), "api-status")
+        if self.path == "/release.json" and os.path.exists(flag):
+            status = int(open(flag).read().strip())
+            body = json.dumps({"message": "API rate limit exceeded for 127.0.0.1." if status == 403 else "Server Error"}).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            if status == 403:
+                self.send_header("x-ratelimit-remaining", "0")
+                self.send_header("x-ratelimit-reset", str(int(time.time()) + 1800))
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        super().do_GET()
+http.server.ThreadingHTTPServer(("127.0.0.1", int(sys.argv[1])), Handler).serve_forever()
+PY
+(cd "$work/site" && exec python3 "$work/server.py" "$port" >/dev/null 2>&1) &
 server_pid=$!
 for _ in $(seq 1 50); do curl -fs "http://127.0.0.1:$port/" >/dev/null 2>&1 && break; sleep 0.1; done
 
@@ -73,6 +97,64 @@ mkdir -p "$work/readonly"; chmod 555 "$work/readonly"
 choice=$(HOME="$work/home" PORTGLIMPSE_APPLICATIONS="$work/readonly" PORTGLIMPSE_SOURCE_ONLY=1 sh -c ". '$INSTALL'; install_dir")
 chmod 755 "$work/readonly"
 if [ "$choice" = "$work/home/Applications" ]; then pass "non-admin falls back to ~/Applications"; else fail "fallback chose $choice"; fi
+
+# GitHub's rate limit is named as such, with the wait, not reported as a lost connection.
+echo 403 > "$work/site/api-status"
+if ! run_install && [ "$(installed_version)" = 1.0.5 ] && grep -q "limit has been reached. Try again in about 30 minutes" "$work/out.txt"; then pass "rate limit explained, app untouched"; else fail "rate limit: $(cat "$work/out.txt")"; fi
+echo 500 > "$work/site/api-status"
+if ! run_install && grep -q "HTTP 500" "$work/out.txt"; then pass "server error reported with its status"; else fail "server error: $(cat "$work/out.txt")"; fi
+rm "$work/site/api-status"
+
+# An update goes where the app already is. Checked through the script's own choice function,
+# with the running copy's folder supplied, so nothing real is inspected or installed.
+choose() { # home applications running-dir
+  HOME="$1" PORTGLIMPSE_APPLICATIONS="$2" PORTGLIMPSE_SOURCE_ONLY=1 RUNNING="$3" sh -c ". '$INSTALL'; running_app_dir() { echo \"\$RUNNING\"; }; install_dir"
+}
+mkdir -p "$work/sys" "$work/home/Applications/PortGlimpse.app"
+choice=$(choose "$work/home" "$work/sys" "")
+if [ "$choice" = "$work/home/Applications" ]; then pass "existing copy in ~/Applications is updated there"; else fail "existing ~/Applications copy: chose $choice"; fi
+choice=$(choose "$work/home" "$work/sys" "$work/sys/Utilities")
+if [ "$choice" = "$work/sys/Utilities" ]; then pass "running copy's folder is updated in place"; else fail "running copy: chose $choice"; fi
+choice=$(choose "$work/nohome" "$work/sys" "$work/DerivedData/Build/Products/Debug")
+if [ "$choice" = "$work/sys" ]; then pass "a copy running from a build folder is not replaced"; else fail "build folder: chose $choice"; fi
+
+# Quitting and relaunching: the running app is quit before the swap and the new one opened after.
+# is_running, quit_app and launch_app are replaced, so the real PortGlimpse is never touched.
+quit_run() { # seconds-until-it-quits ("never" to keep running)
+  PORTGLIMPSE_API="http://127.0.0.1:$port/release.json" PORTGLIMPSE_INSTALL_DIR="$work/Apps" PORTGLIMPSE_SOURCE_ONLY=1 \
+    LOG="$work/calls.txt" STATE="$work/state" QUITS_AFTER="$1" sh -c "
+      . '$INSTALL'
+      is_running() { [ -e \"\$STATE/running\" ]; }
+      quit_app() {
+        echo \"quit, installed \$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' '$work/Apps/PortGlimpse.app/Contents/Info.plist')\" >> \"\$LOG\"
+        [ \"\$QUITS_AFTER\" = never ] || (sleep \"\$QUITS_AFTER\"; rm -f \"\$STATE/running\") &
+      }
+      launch_app() { echo \"launch \$1, installed \$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \"\$1/Contents/Info.plist\")\" >> \"\$LOG\"; }
+      main" >"$work/out.txt" 2>&1
+}
+mkdir -p "$work/state"; : > "$work/calls.txt"; touch "$work/state/running"
+release 1.0.6
+if quit_run 1 && [ "$(installed_version)" = 1.0.6 ] \
+  && [ "$(cat "$work/calls.txt")" = "$(printf 'quit, installed 1.0.5\nlaunch %s, installed 1.0.6' "$work/Apps/PortGlimpse.app")" ]; then
+  pass "running app quit before the swap, new one launched after"
+else fail "quit and relaunch: $(cat "$work/out.txt") / $(cat "$work/calls.txt")"; fi
+: > "$work/calls.txt"; touch "$work/state/running"
+release 1.0.7
+if ! quit_run never && [ "$(installed_version)" = 1.0.6 ] && grep -q "didn't quit" "$work/out.txt" && ! grep -q launch "$work/calls.txt"; then
+  pass "an app that won't quit is left alone"
+else fail "won't quit: $(cat "$work/out.txt") / $(cat "$work/calls.txt")"; fi
+rm -f "$work/state/running"; : > "$work/calls.txt"
+release 1.0.8
+if quit_run 1 && [ "$(installed_version)" = 1.0.8 ] && [ "$(cat "$work/calls.txt")" = "$(printf 'launch %s, installed 1.0.8' "$work/Apps/PortGlimpse.app")" ]; then
+  pass "an app that isn't running is not asked to quit"
+else fail "not running: $(cat "$work/out.txt") / $(cat "$work/calls.txt")"; fi
+
+# The documented form: the script arrives on standard input, as with curl … | sh.
+release 1.0.9
+if curl -fsSL "file://$INSTALL" | PORTGLIMPSE_API="http://127.0.0.1:$port/release.json" PORTGLIMPSE_INSTALL_DIR="$work/Apps" PORTGLIMPSE_NO_LAUNCH=1 sh >"$work/out.txt" 2>&1 \
+  && [ "$(installed_version)" = 1.0.9 ] && grep -q "installed 1.0.9" "$work/out.txt"; then
+  pass "piped into sh, as documented"
+else fail "piped: $(cat "$work/out.txt")"; fi
 
 [ "$failures" -eq 0 ] || { echo "$failures installer test(s) failed"; exit 1; }
 echo "installer: all tests passed"
