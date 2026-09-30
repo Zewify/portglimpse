@@ -50,7 +50,11 @@ struct PortList: View {
                 Divider().overlay(Theme.line)
                 VStack(alignment: .leading, spacing: 2) {
                     sectionLabel("Other users · view only")
-                    if let problem = model.otherUsersProblem { message(problem) }
+                    if let problem = model.otherUsersProblem {
+                        message(problem)
+                    } else if model.rows(in: .otherUsers).isEmpty {
+                        message("No other users’ ports.")
+                    }
                     ForEach(model.rows(in: .otherUsers)) { RowView(row: $0, model: model, compact: compact) }
                 }
                 .padding(8)

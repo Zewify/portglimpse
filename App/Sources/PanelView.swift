@@ -8,8 +8,11 @@ struct PanelView<Footer: View>: View {
     let onPopOut: (() -> Void)?
     let footer: Footer
 
-    /// Past this many rows the list scrolls instead of growing off the screen.
-    static var scrollThreshold: Int { 12 }
+    /// Past this height the list scrolls instead of growing off the screen.
+    static var maxListHeight: CGFloat { 600 }
+
+    /// The list's natural height, measured, so hidden rows (collapsed sections) never count.
+    @State private var listHeight: CGFloat = 0
 
     init(model: PanelModel, onPopOut: (() -> Void)? = nil, @ViewBuilder footer: () -> Footer) {
         self.model = model
@@ -21,10 +24,10 @@ struct PanelView<Footer: View>: View {
         VStack(spacing: 0) {
             header
             Divider().overlay(Theme.line)
-            if model.rows.count > Self.scrollThreshold {
-                ScrollView { PortList(model: model) }.frame(height: 600)
+            if listHeight > Self.maxListHeight {
+                ScrollView { measuredList }.frame(height: Self.maxListHeight)
             } else {
-                PortList(model: model)
+                measuredList
             }
             Divider().overlay(Theme.line)
             footer
@@ -33,6 +36,14 @@ struct PanelView<Footer: View>: View {
         .background(Theme.panel)
         .environment(\.colorScheme, .dark)
         .background(PanelWindowObserver(onOpen: model.panelOpened, onClose: model.panelClosed, onEscape: model.withdrawQuestion))
+    }
+
+    private var measuredList: some View {
+        PortList(model: model)
+            .background(GeometryReader { proxy in
+                Color.clear.preference(key: ListHeightKey.self, value: proxy.size.height)
+            })
+            .onPreferenceChange(ListHeightKey.self) { listHeight = $0 }
     }
 
     private var header: some View {
@@ -65,4 +76,9 @@ struct LiveBadge: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Updating live")
     }
+}
+
+private struct ListHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }

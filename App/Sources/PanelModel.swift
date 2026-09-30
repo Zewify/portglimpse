@@ -58,11 +58,12 @@ final class PanelModel {
     // MARK: Polling
 
     /// Keeps the menu bar count current with one cheap scan every 10 seconds.
+    /// Ticks skip the netstat scan (only the count matters) and stand aside while a viewer's live loop is running.
     func start() {
         backgroundLoop?.cancel()
         backgroundLoop = Task {
             while !Task.isCancelled {
-                await refresh()
+                if viewers == 0 { await refresh(includeOtherUsers: false) }
                 try? await Task.sleep(for: .seconds(10))
             }
         }
@@ -103,19 +104,26 @@ final class PanelModel {
         cancelConfirmations()
     }
 
-    func refresh() async {
+    /// Background ticks pass `includeOtherUsers: false`: they never run netstat, and a viewer that turns
+    /// up mid-scan starts a newer refresh whose result wins.
+    func refresh(includeOtherUsers: Bool = true) async {
         // Scans can overlap and finish out of order; only a result newer than the last one applied is used,
         // so a scan begun before a kill cannot bring the killed row back.
         refreshCounter += 1
         let generation = refreshCounter
-        let showAll = showAll
+        let showAll = includeOtherUsers && self.showAll
         let overrides = overrideStore.overrides
         let result = await Task.detached(priority: .utility) { PortScan.run(showAll: showAll, overrides: overrides) }.value
         guard generation > appliedRefresh else { return }
         appliedRefresh = generation
-        rows = result.rows
+        if includeOtherUsers {
+            rows = result.rows
+            otherUsersProblem = result.otherUsersProblem
+        } else {
+            // A count-only scan knows nothing about other users, so it must not wipe what a viewer last saw.
+            rows = result.rows.filter { $0.section != .otherUsers } + rows.filter { $0.section == .otherUsers }
+        }
         problem = result.problem
-        otherUsersProblem = result.otherUsersProblem
         let live = Set(rows.map(\.pid))
         phases = phases.filter { live.contains($0.key) }
     }
