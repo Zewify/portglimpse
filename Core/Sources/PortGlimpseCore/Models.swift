@@ -34,12 +34,14 @@ public struct ProcessDetails: Equatable, Sendable {
     public var arguments: [String]
     public var workingDirectory: String?
     public var uid: UInt32?
+    public var parentPID: Int32?
 
-    public init(executablePath: String? = nil, arguments: [String] = [], workingDirectory: String? = nil, uid: UInt32? = nil) {
+    public init(executablePath: String? = nil, arguments: [String] = [], workingDirectory: String? = nil, uid: UInt32? = nil, parentPID: Int32? = nil) {
         self.executablePath = executablePath
         self.arguments = arguments
         self.workingDirectory = workingDirectory
         self.uid = uid
+        self.parentPID = parentPID
     }
 }
 
@@ -55,8 +57,10 @@ public struct Row: Identifiable, Equatable, Sendable {
     public let owner: String?
     public let section: Section
     public let executablePath: String?
+    /// Child processes listening only on this row's ports, folded into it; sorted ascending.
+    public let workerPIDs: [Int32]
 
-    public init(pid: Int32, ports: [UInt16], command: String, folder: String?, owner: String?, section: Section, executablePath: String?) {
+    public init(pid: Int32, ports: [UInt16], command: String, folder: String?, owner: String?, section: Section, executablePath: String?, workerPIDs: [Int32] = []) {
         self.pid = pid
         self.ports = ports
         self.command = command
@@ -64,5 +68,6 @@ public struct Row: Identifiable, Equatable, Sendable {
         self.owner = owner
         self.section = section
         self.executablePath = executablePath
+        self.workerPIDs = workerPIDs
     }
 }

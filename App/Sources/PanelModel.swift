@@ -156,7 +156,13 @@ final class PanelModel {
 
     func confirmForceKill(_ row: Row) {
         guard phase(of: row) == .stillRunning else { return }
-        run(row) { terminator, pid in await terminator.forceKill(pid) }
+        // A server that ignored SIGTERM may leave its workers running too, so they are force killed with it.
+        let workers = row.workerPIDs
+        run(row) { terminator, pid in
+            let outcome = await terminator.forceKill(pid)
+            for worker in workers { _ = await terminator.forceKill(worker) }
+            return outcome
+        }
     }
 
     private func run(_ row: Row, _ action: @escaping @Sendable (Terminator, Int32) async -> KillOutcome) {

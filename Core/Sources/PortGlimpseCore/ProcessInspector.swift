@@ -9,12 +9,13 @@ public enum ProcessInspector {
     /// Nil when the process does not exist. Other fields stay nil or empty when the kernel refuses them,
     /// which it does for other users' paths and arguments.
     public static func details(pid: Int32) -> ProcessDetails? {
-        guard let uid = uid(of: pid) else { return nil }
+        guard let info = kinfo(of: pid) else { return nil }
         return ProcessDetails(
             executablePath: executablePath(of: pid),
             arguments: arguments(of: pid),
             workingDirectory: workingDirectory(of: pid),
-            uid: uid
+            uid: info.kp_eproc.e_ucred.cr_uid,
+            parentPID: info.kp_eproc.e_ppid
         )
     }
 

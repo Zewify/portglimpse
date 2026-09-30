@@ -39,7 +39,7 @@ struct RowView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 10) {
                     PortTag(port: row.ports[0], section: row.section)
-                    Text(verbatim: "Kill \(row.command) on :\(row.ports[0])?")
+                    Text(verbatim: row.killQuestion)
                         .font(Theme.body(13, .bold))
                         .foregroundStyle(Theme.text)
                         .lineLimit(2)
@@ -84,7 +84,7 @@ struct RowView: View {
             .padding(.trailing, 6)
             .padding(.vertical, 6)
             .frame(minHeight: 40)
-            .help(row.folder ?? "")
+            .help([row.folder, row.workerSummary].compactMap { $0 }.joined(separator: " · "))
         }
     }
 
@@ -95,10 +95,18 @@ struct RowView: View {
         case .failed(let reason):
             Text(verbatim: "Couldn’t kill. \(reason)").font(Theme.body(12)).foregroundStyle(Theme.softText).lineLimit(2)
         default:
-            Text(verbatim: row.command)
-                .font(Theme.body(14, .bold))
-                .foregroundStyle(row.section == .dev ? Theme.text : Theme.softText)
-                .lineLimit(1)
+            HStack(spacing: 5) {
+                Text(verbatim: row.command)
+                    .font(Theme.body(14, .bold))
+                    .foregroundStyle(row.section == .dev ? Theme.text : Theme.softText)
+                    .lineLimit(1)
+                if !row.workerPIDs.isEmpty {
+                    Text(verbatim: "+\(row.workerPIDs.count)")
+                        .font(Theme.body(12, .semibold))
+                        .foregroundStyle(Theme.muted)
+                        .fixedSize()
+                }
+            }
         }
     }
 
@@ -126,7 +134,7 @@ struct RowView: View {
                 actions
             }
         case .confirming:
-            Text(verbatim: "Kill \(row.command) on :\(row.ports[0])?")
+            Text(verbatim: row.killQuestion)
                 .font(Theme.body(13, .bold))
                 .foregroundStyle(Theme.text)
                 .lineLimit(2)
@@ -165,11 +173,18 @@ struct RowView: View {
                 .font(Theme.body(14, .bold))
                 .foregroundStyle(row.section == .dev ? Theme.text : Theme.softText)
                 .lineLimit(1)
-            Text(verbatim: row.section == .otherUsers ? "PID \(row.pid)" : (row.folder ?? "PID \(row.pid)"))
-                .font(Theme.body(12))
-                .foregroundStyle(Theme.muted)
-                .lineLimit(1)
-                .truncationMode(.middle)
+            // The worker count stays whole while a long folder shortens in the middle.
+            HStack(spacing: 4) {
+                Text(verbatim: row.section == .otherUsers ? "PID \(row.pid)" : (row.folder ?? "PID \(row.pid)"))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                if let workers = row.workerSummary {
+                    Text(verbatim: "·")
+                    Text(verbatim: workers).lineLimit(1).fixedSize()
+                }
+            }
+            .font(Theme.body(12))
+            .foregroundStyle(Theme.muted)
         }
     }
 

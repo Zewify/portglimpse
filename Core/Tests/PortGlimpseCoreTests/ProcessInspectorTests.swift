@@ -45,6 +45,10 @@ struct ProcessInspectorTests {
         #expect(ProcessInspector.isRunning(getpid()))
     }
 
+    @Test func readsTheParentProcess() {
+        #expect(ProcessInspector.details(pid: getpid())?.parentPID == getppid())
+    }
+
     @Test func launchdBelongsToRoot() {
         #expect(ProcessInspector.uid(of: 1) == 0)
         #expect(ProcessInspector.userName(for: 0) == "root")

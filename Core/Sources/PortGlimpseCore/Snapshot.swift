@@ -35,8 +35,12 @@ public struct SnapshotBuilder: Sendable {
             ports[listener.pid, default: []].insert(listener.port)
             if let name = listener.reportedName { names[listener.pid] = name }
         }
+        var details: [Int32: ProcessDetails] = [:]
+        for pid in ports.keys { details[pid] = inspect(pid) }
+        let workers = Self.workers(ports: ports, details: details)
+        let folded = Set(workers.values.joined())
         return ports.compactMap { pid, portSet in
-            guard let details = inspect(pid) else { return nil }
+            guard !folded.contains(pid), let details = details[pid] else { return nil }
             let section = classifier.section(for: details)
             if section == .otherUsers, all == nil { return nil }
             let fallback = names[pid] ?? details.executablePath.map { ($0 as NSString).lastPathComponent } ?? "PID \(pid)"
@@ -47,10 +51,35 @@ public struct SnapshotBuilder: Sendable {
                 folder: folder(for: details, in: section),
                 owner: section == .otherUsers ? details.uid.map(userName) : nil,
                 section: section,
-                executablePath: details.executablePath
+                executablePath: details.executablePath,
+                workerPIDs: workers[pid] ?? []
             )
         }
         .sorted { ($0.section.order, $0.ports[0], $0.pid) < ($1.section.order, $1.ports[0], $1.pid) }
+    }
+
+    /// A worker listens only on ports its parent also listens on, and belongs to the same user; granian, gunicorn,
+    /// Node's cluster and nginx all hand their listening socket to children like this. Each worker is folded into its
+    /// topmost such ancestor, so a server and its workers make one row. Keyed by that ancestor; values sorted.
+    static func workers(ports: [Int32: Set<UInt16>], details: [Int32: ProcessDetails]) -> [Int32: [Int32]] {
+        func parent(of pid: Int32) -> Int32? {
+            guard let child = details[pid], let ppid = child.parentPID, ppid != pid,
+                  let parent = details[ppid], parent.uid == child.uid,
+                  let childPorts = ports[pid], let parentPorts = ports[ppid], childPorts.isSubset(of: parentPorts) else { return nil }
+            return ppid
+        }
+        var result: [Int32: [Int32]] = [:]
+        for pid in ports.keys {
+            var top = pid
+            var steps = 0
+            // The step limit guards against a parent loop, which a PID reused mid-scan could create.
+            while let next = parent(of: top), steps < 64 {
+                top = next
+                steps += 1
+            }
+            if top != pid { result[top, default: []].append(pid) }
+        }
+        return result.mapValues { $0.sorted() }
     }
 
     func folder(for details: ProcessDetails, in section: Section) -> String? {
