@@ -19,7 +19,12 @@ final class UpdateChecker {
     var isEnabled: Bool {
         didSet {
             defaults.set(isEnabled, forKey: Keys.enabled)
-            if isEnabled { Task { await check(force: true) } } else { available = nil }
+            if isEnabled {
+                remember(defaults.string(forKey: Keys.latestKnown).flatMap(AppVersion.init))
+                Task { await check(force: true) }
+            } else {
+                available = nil
+            }
         }
     }
 
@@ -44,11 +49,13 @@ final class UpdateChecker {
         guard isEnabled else { return }
         let last = defaults.object(forKey: Keys.lastCheck) as? Date ?? .distantPast
         guard force || Date().timeIntervalSince(last) >= 86_400 else { return }
-        defaults.set(Date(), forKey: Keys.lastCheck)
         var request = URLRequest(url: Self.feed)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        // Only a request that got an HTTP response uses up the day; offline or timeout retries on the next pass.
         guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200,
+              let http = response as? HTTPURLResponse else { return }
+        defaults.set(Date(), forKey: Keys.lastCheck)
+        guard http.statusCode == 200,
               let latest = try? ReleaseFeed.latestVersion(fromJSON: data) else { return }
         defaults.set(latest.description, forKey: Keys.latestKnown)
         remember(latest)
