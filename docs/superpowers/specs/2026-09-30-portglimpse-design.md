@@ -13,7 +13,7 @@ Success means a developer can find and stop a stale dev server in two clicks and
 ## Decisions already made
 
 - Free, with no in-app purchase and no Pro tier.
-- Distributed outside the Mac App Store, as a notarized download installed and updated with one `curl` command.
+- Distributed outside the Mac App Store, as an ad hoc signed download installed and updated with one `curl` command.
 - The source is public at `github.com/zewify/portglimpse`.
 - It is a viewer with a kill button, never a process manager: no starting, restarting, logs or remote machines.
 - Kill always asks for confirmation first.
@@ -156,31 +156,41 @@ Kill: row → `Terminator` → state updates on the row → the next poll remove
 
 ## Distribution
 
+### Signing: ad hoc, curl only
+
+Decided on 2026-09-30: releases are signed ad hoc, the same signature every local build already has, with no Developer ID certificate and no notarization.
+A Developer ID certificate from an individual Apple team puts the account holder's legal name in the code signature, which the Identity rules below forbid.
+Ad hoc is enough for the supported install path, because macOS only runs its Gatekeeper check on files marked as downloaded from the internet, and `curl` adds no such mark; Apple silicon only requires that some signature exists.
+The cost, accepted knowingly: a zip downloaded in a browser is refused with "PortGlimpse can't be opened", so the site offers the `curl` command only, never a download button, and a Homebrew cask is not possible.
+Adding a Developer ID later changes neither the install command nor anything a user does.
+
 ### Releases
 
 A version tag (`v1.0.0`) runs a GitHub Actions workflow on a macOS runner.
-It builds Release, signs with a Developer ID Application certificate, notarizes with `notarytool`, staples, zips the `.app` with `ditto`, and publishes the zip and its SHA-256 to GitHub Releases as `github-actions[bot]`.
-Signing secrets live in repository secrets: the certificate as a base64 `.p12` with its password, and an App Store Connect API key for notarization.
+It checks the tag equals `MARKETING_VERSION` in `project.yml`, runs `./scripts/test.sh`, builds Release as a universal binary, zips `PortGlimpse.app` with `ditto` as `PortGlimpse-<version>.zip`, writes its SHA-256 beside it as `PortGlimpse-<version>.zip.sha256`, and publishes both to GitHub Releases as `github-actions[bot]`.
+A second workflow runs the tests on every push to `main`.
 
 ### Install and update
 
 `curl -fsSL https://zewify.com/portglimpse/install.sh | sh`:
 
 1. Finds the latest release through the GitHub API.
-2. Downloads the zip and checks its SHA-256.
+2. Downloads the zip and checks its SHA-256, refusing to install on a mismatch.
 3. Quits a running PortGlimpse, then installs to `/Applications` when writable (admin accounts can write there without `sudo`), else to `~/Applications`.
 4. Launches it.
 
 Running the same command again is the update.
-The script is POSIX `sh`, idempotent, never uses `sudo`, and prints what it did.
-Uninstalling is documented on the site: turn off Launch at login, quit, then delete the app and its Application Support folder.
+The script is POSIX `sh`, idempotent, never uses `sudo`, leaves the installed app untouched when anything fails, and prints what it did.
+It lives in this repo at `scripts/install.sh`; `https://zewify.com/portglimpse/install.sh` is a redirect to its raw copy on `main`, set in the web server that serves zewify.com, so there is one copy and it cannot drift.
+Uninstalling is documented on the site: turn off Launch at login, quit, then delete the app, its Application Support folder and its preferences.
 
 ### Website
 
-The zewify repo gains a `/portglimpse/` product page built like `/tickthock/`, and serves `install.sh` at `/portglimpse/install.sh`.
-It explains install, update, uninstall and what PortGlimpse can and cannot see, and links to the GitHub repo.
-All printed facts (version, minimum macOS, repo URL) live in that page's data file, as `src/data/site.ts` does for the others.
-The page must pass the existing `tests/dist.test.mjs` identity denylist.
+The zewify repo gains `/portglimpse/` (overview, with install, update and uninstall) and `/portglimpse/privacy/`, in TickThock's look, since PortGlimpse shares its design language.
+They link to the GitHub repo and state only what the app and this spec say.
+All printed facts (version, minimum macOS, install command, repo URL, the update check) live in `src/portglimpse/data.ts`, and `latestVersion` there is the launch switch: while it is null the page reads "Coming soon" and prints no install command.
+Screenshots come from a debug-only demo mode with made-up projects, never from a real Mac's processes, which would show real folder names.
+The pages must pass the existing `tests/dist.test.mjs` identity denylist.
 
 ## Identity
 
@@ -205,11 +215,10 @@ macOS 14 or later, matching TickThock, on Apple silicon and Intel as a universal
 - The install script is tested against a local fake release (a file server and a zip), covering the fresh install, the update and the `~/Applications` fallback.
 - UI is checked by hand against the canvas before each release, at 2560×1440 and a laptop width.
 
-## Prerequisites before implementation
+## Prerequisites before distribution
 
-- Create a Developer ID Application certificate for team `GHVX6RBQ64`.
-- Create an App Store Connect API key for notarization.
 - Create the `zewify/portglimpse` repo, public, with issues disabled.
+- No Apple certificates or keys are needed (see Signing).
 
 ## Out of scope for 1.0
 
