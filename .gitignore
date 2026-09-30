@@ -1,0 +1,10 @@
+.DS_Store
+.build/
+.swiftpm/
+DerivedData/
+build/
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+# Local signing overrides, never committed
+Signing.local.xcconfig
