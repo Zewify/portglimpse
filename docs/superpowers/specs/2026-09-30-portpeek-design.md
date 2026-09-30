@@ -109,8 +109,9 @@ Each unit below has one job and is tested on its own.
 - **`SocketScanner`** returns `[Listener]` (port, protocol family, PID) for TCP sockets in `LISTEN`.
   It has two sources behind one protocol.
   The primary source walks the current user's processes with `proc_listallpids`, `PROC_PIDLISTFDS` and `PROC_PIDFDSOCKETINFO`, which are public API.
-  The "Show all" source reads the `net.inet.tcp.pcblist_n` sysctl, the table `netstat -anv` prints, which also names processes owned by other users.
-  That record layout is undocumented, so it is isolated in one file, parsed defensively, and covered by a test against `netstat`'s own output; if it fails, the Other users section shows "Can't read other users' ports on this macOS version" and the rest keeps working.
+  The "Show all" source runs `/usr/sbin/netstat -anv -p tcp` and parses its text, which names processes owned by other users without root (the spike confirmed `launchd` and Tailscale).
+  Parsing `netstat`'s text was chosen over reading the `net.inet.tcp.pcblist_n` sysctl directly, because that sysctl's record layout is undocumented and a wrong offset fails silently, while text parsing is pinned by a test against a real capture.
+  If it fails or returns nothing while the user has listeners, the Other users section shows "Can't read other users' ports on this macOS version" and the rest keeps working.
 - **`ProcessInspector`** returns a `ProcessDetails` (executable path, arguments via `KERN_PROCARGS2`, working directory via `PROC_PIDVNODEPATHINFO`, owner UID) for a PID, with every field optional because a process can exit mid-read.
 - **`CommandLabel`** turns arguments into the short command shown on a row, with rules for common runtimes (`node …/next dev` → `next dev`, `python -m http.server` → `http.server`, a bare binary → its name).
 - **`Classifier`** assigns each process to a `Section`, applying overrides.
@@ -179,7 +180,7 @@ macOS 14 or later, matching TickThock, on Apple silicon and Intel as a universal
 - Core unit tests for `CommandLabel`, `Classifier`, `OverrideStore`, `Snapshot` and `Terminator`, from recorded fixtures of real process and socket data.
 - An integration test that starts a real TCP server on a free port in a child process, asserts `SocketScanner` finds it with the right PID and working directory, kills it through `Terminator`, and asserts the port is free.
 - An integration test that starts a child ignoring `SIGTERM` and asserts `Terminator` reports `stillRunning` and then stops it with `SIGKILL`.
-- A test that compares the `pcblist_n` source against `netstat -anv -p tcp` on the machine running it.
+- A test that parses a real `netstat -anv -p tcp` capture, including a process name with a space, and a live test that finds the test server through `netstat`.
 - The install script is tested against a local fake release (a file server and a zip), covering the fresh install, the update and the `~/Applications` fallback.
 - UI is checked by hand against the canvas before each release, at 2560×1440 and a laptop width.
 
