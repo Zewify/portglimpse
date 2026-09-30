@@ -38,6 +38,9 @@ final class PanelModel {
     private let overrideStore: OverrideStore
     private let terminator = Terminator.live()
     private var viewers = 0
+    private var isPanelOpen = false
+    private var refreshCounter = 0
+    private var appliedRefresh = 0
     private var liveLoop: Task<Void, Never>?
     private var backgroundLoop: Task<Void, Never>?
 
@@ -85,18 +88,31 @@ final class PanelModel {
         liveLoop = nil
     }
 
-    func panelOpened() { viewerAppeared() }
+    /// Idempotent: the window can report becoming key more than once without resigning.
+    func panelOpened() {
+        guard !isPanelOpen else { return }
+        isPanelOpen = true
+        viewerAppeared()
+    }
 
     /// Clicking away from the menu bar panel withdraws any question it was asking.
     func panelClosed() {
+        guard isPanelOpen else { return }
+        isPanelOpen = false
         viewerDisappeared()
         cancelConfirmations()
     }
 
     func refresh() async {
+        // Scans can overlap and finish out of order; only a result newer than the last one applied is used,
+        // so a scan begun before a kill cannot bring the killed row back.
+        refreshCounter += 1
+        let generation = refreshCounter
         let showAll = showAll
         let overrides = overrideStore.overrides
         let result = await Task.detached(priority: .utility) { PortScan.run(showAll: showAll, overrides: overrides) }.value
+        guard generation > appliedRefresh else { return }
+        appliedRefresh = generation
         rows = result.rows
         problem = result.problem
         otherUsersProblem = result.otherUsersProblem
@@ -119,10 +135,12 @@ final class PanelModel {
     }
 
     func confirmKill(_ row: Row) {
+        guard phase(of: row) == .confirming else { return }
         run(row) { terminator, pid in await terminator.stop(pid) }
     }
 
     func confirmForceKill(_ row: Row) {
+        guard phase(of: row) == .stillRunning else { return }
         run(row) { terminator, pid in await terminator.forceKill(pid) }
     }
 
@@ -136,7 +154,8 @@ final class PanelModel {
                 phases[pid] = nil
                 await refresh()
             case .stillRunning:
-                phases[pid] = .stillRunning
+                // With nothing showing, a question would be stale by the time the panel reopens.
+                phases[pid] = viewers == 0 ? nil : .stillRunning
             case .failed(let reason):
                 phases[pid] = .failed(reason)
                 try? await Task.sleep(for: .seconds(4))

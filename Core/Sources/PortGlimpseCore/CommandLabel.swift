@@ -8,7 +8,11 @@ public enum CommandLabel {
     public static func label(arguments: [String], fallbackName: String) -> String {
         guard let first = arguments.first, !first.isEmpty else { return truncate(fallbackName) }
         let executable = baseName(first)
-        guard Runtimes.isRuntime(executable) else { return truncate(executable) }
+        guard Runtimes.isRuntime(executable) else {
+            // Servers such as redis and postgres rewrite their process title, so argv[0] can read
+            // "redis-server 127.0.0.1:6379". The executable's own file name is the clean label.
+            return truncate(fallbackName.isEmpty ? executable : fallbackName)
+        }
 
         let rest = Array(arguments.dropFirst())
         if let flag = rest.firstIndex(of: "-m"), flag + 1 < rest.count {

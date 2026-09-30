@@ -43,7 +43,13 @@ struct CommandLabelTests {
     }
 
     @Test func plainBinaryIsItsName() {
-        #expect(label(["/opt/homebrew/opt/redis/bin/redis-server", "127.0.0.1:6379"]) == "redis-server")
+        // redis rewrites its process title, so argv[0] is "redis-server 127.0.0.1:6379";
+        // the executable's file name (the fallback) is the clean label.
+        #expect(label(["redis-server 127.0.0.1:6379"], fallback: "redis-server") == "redis-server")
+    }
+
+    @Test func plainBinaryWithoutFallbackUsesArgvBaseName() {
+        #expect(label(["/opt/homebrew/opt/redis/bin/redis-server", "127.0.0.1:6379"], fallback: "") == "redis-server")
     }
 
     @Test func noArgumentsUsesTheFallback() {
@@ -52,7 +58,7 @@ struct CommandLabelTests {
 
     @Test func longLabelsAreTruncated() {
         let long = String(repeating: "a", count: 60)
-        let result = label(["/bin/\(long)"])
+        let result = label(["/bin/\(long)"], fallback: long)
         #expect(result.count == 40)
         #expect(result.hasSuffix("…"))
     }
