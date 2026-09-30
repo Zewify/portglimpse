@@ -97,7 +97,7 @@ It adapts to its width.
 
 ### Menu bar icon
 
-The icon is the app icon's tile in full colour, the amber colon keycap on its dark tile, drawn at 18 points the same way as TickThock's menu bar icon so the two read as siblings (chosen on 2026-09-30 over the earlier white template outline).
+The icon is TickThock's dark tile (`#221e1b`) with the amber colon (`#f48e48`) from every port label, drawn in full colour at 18 points so it sits beside TickThock's icon as a sibling (final choice, 2026-09-30, after trying the white template outline, the full app-icon tile and an amber outline).
 Next to it is the number of dev servers; with none, the icon fades to 40 % and shows no number.
 The count can be hidden in Settings.
 

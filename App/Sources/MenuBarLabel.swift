@@ -1,10 +1,10 @@
 import AppKit
 import SwiftUI
 
-/// The app icon's tile in full colour, drawn the same way as TickThock's so the two read as siblings.
+/// TickThock's dark tile with the amber colon from every port label, drawn in full colour at menu bar size.
 @MainActor
 enum MenuBarIcon {
-    /// Menu bar icons are 18 points tall; the app icon's tile fills that once its transparent margin is cropped.
+    /// Menu bar icons are 18 points tall.
     private static let size = NSSize(width: 18, height: 18)
 
     private static let normal = render(opacity: 1)
@@ -14,12 +14,14 @@ enum MenuBarIcon {
 
     /// Drawn on demand, so it stays sharp at whatever scale the menu bar's display uses.
     private static func render(opacity: CGFloat) -> NSImage {
-        let icon = NSApp.applicationIconImage ?? NSImage()
         let image = NSImage(size: size, flipped: false) { rect in
-            // The icon's squircle spans 100...924 of its 1024-point canvas (scripts/make-icon.swift).
-            let tile = NSRect(x: icon.size.width * 100 / 1024, y: icon.size.height * 100 / 1024,
-                              width: icon.size.width * 824 / 1024, height: icon.size.height * 824 / 1024)
-            icon.draw(in: rect, from: tile, operation: .sourceOver, fraction: opacity)
+            let tile = NSBezierPath(roundedRect: rect.insetBy(dx: 0.5, dy: 0.5), xRadius: 4, yRadius: 4)
+            NSColor(srgbRed: 0x22 / 255, green: 0x1E / 255, blue: 0x1B / 255, alpha: opacity).setFill()
+            tile.fill()
+            NSColor(srgbRed: 0xF4 / 255, green: 0x8E / 255, blue: 0x48 / 255, alpha: opacity).setFill()
+            for centreY in [5.8, 12.2] {
+                NSBezierPath(ovalIn: NSRect(x: 9 - 1.8, y: centreY - 1.8, width: 3.6, height: 3.6)).fill()
+            }
             return true
         }
         image.isTemplate = false
