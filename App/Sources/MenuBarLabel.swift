@@ -1,41 +1,41 @@
 import AppKit
 import SwiftUI
 
-/// The colon keycap, drawn as a template image so macOS tints it for the menu bar.
+/// The app icon's tile in full colour, drawn the same way as TickThock's so the two read as siblings.
 @MainActor
-enum KeycapGlyph {
-    private static let normal = draw(alpha: 1)
-    private static let dim = draw(alpha: 0.5)
+enum MenuBarIcon {
+    /// Menu bar icons are 18 points tall; the app icon's tile fills that once its transparent margin is cropped.
+    private static let size = NSSize(width: 18, height: 18)
+
+    private static let normal = render(opacity: 1)
+    private static let dim = render(opacity: 0.4)
 
     static func image(dimmed: Bool) -> NSImage { dimmed ? dim : normal }
 
-    private static func draw(alpha: CGFloat) -> NSImage {
-        let image = NSImage(size: NSSize(width: 16, height: 16), flipped: false) { _ in
-            let ink = NSColor.black.withAlphaComponent(alpha)
-            let key = NSBezierPath(roundedRect: NSRect(x: 2.25, y: 2.25, width: 11.5, height: 11.5), xRadius: 3, yRadius: 3)
-            key.lineWidth = 1.5
-            ink.setStroke()
-            key.stroke()
-            ink.setFill()
-            for centreY in [6.0, 10.0] {
-                NSBezierPath(ovalIn: NSRect(x: 8 - 1.2, y: centreY - 1.2, width: 2.4, height: 2.4)).fill()
-            }
+    /// Drawn on demand, so it stays sharp at whatever scale the menu bar's display uses.
+    private static func render(opacity: CGFloat) -> NSImage {
+        let icon = NSApp.applicationIconImage ?? NSImage()
+        let image = NSImage(size: size, flipped: false) { rect in
+            // The icon's squircle spans 100...924 of its 1024-point canvas (scripts/make-icon.swift).
+            let tile = NSRect(x: icon.size.width * 100 / 1024, y: icon.size.height * 100 / 1024,
+                              width: icon.size.width * 824 / 1024, height: icon.size.height * 824 / 1024)
+            icon.draw(in: rect, from: tile, operation: .sourceOver, fraction: opacity)
             return true
         }
-        image.isTemplate = true
+        image.isTemplate = false
         image.accessibilityDescription = "PortGlimpse"
         return image
     }
 }
 
-/// The icon plus the number of dev servers; dimmed with no number when there are none.
+/// The icon plus the number of dev servers; faded with no number when there are none.
 struct MenuBarLabel: View {
     let devCount: Int
     let showCount: Bool
 
     var body: some View {
-        HStack(spacing: 3) {
-            Image(nsImage: KeycapGlyph.image(dimmed: devCount == 0))
+        HStack(spacing: 4) {
+            Image(nsImage: MenuBarIcon.image(dimmed: devCount == 0))
             if showCount, devCount > 0 {
                 Text(verbatim: "\(devCount)").monospacedDigit()
             }

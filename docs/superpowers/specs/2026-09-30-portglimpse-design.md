@@ -97,8 +97,8 @@ It adapts to its width.
 
 ### Menu bar icon
 
-The icon is the "colon keycap": a rounded-square key outline with a colon inside, drawn as a template image so macOS tints it for the menu bar.
-Next to it is the number of dev servers; with none, the icon is dimmed and shows no number.
+The icon is the app icon's tile in full colour, the amber colon keycap on its dark tile, drawn at 18 points the same way as TickThock's menu bar icon so the two read as siblings (chosen on 2026-09-30 over the earlier white template outline).
+Next to it is the number of dev servers; with none, the icon fades to 40 % and shows no number.
 The count can be hidden in Settings.
 
 ### Settings
