@@ -111,6 +111,16 @@ final class PanelModel {
         // so a scan begun before a kill cannot bring the killed row back.
         refreshCounter += 1
         let generation = refreshCounter
+        #if DEBUG
+        // Screenshots for the website use made-up rows, never this Mac's real processes.
+        if DemoRows.enabled {
+            appliedRefresh = generation
+            rows = DemoRows.rows
+            problem = nil
+            otherUsersProblem = nil
+            return
+        }
+        #endif
         let showAll = includeOtherUsers && self.showAll
         let overrides = overrideStore.overrides
         let result = await Task.detached(priority: .utility) { PortScan.run(showAll: showAll, overrides: overrides) }.value
