@@ -57,10 +57,38 @@ final class FloatingWindowController: NSObject, NSWindowDelegate {
         model.viewerAppeared()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate()
+        centreTrafficLights(in: window)
+    }
+
+    /// AppKit places the traffic lights on the title bar's centre line, which sits above the taller header's.
+    /// It lays them out again on resize and focus changes, so every one of those moves them back down.
+    private func centreTrafficLights(in window: NSWindow) {
+        let centreFromTop = WindowView<EmptyView>.headerHeight / 2
+        for kind in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+            guard let button = window.standardWindowButton(kind), let titlebar = button.superview else { continue }
+            let y = titlebar.frame.height - centreFromTop - button.frame.height / 2
+            if button.frame.origin.y != y { button.setFrameOrigin(NSPoint(x: button.frame.origin.x, y: y)) }
+        }
     }
 
     func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
         NSSize(width: max(frameSize.width, Self.minimumSize.width), height: max(frameSize.height, Self.minimumSize.height))
+    }
+
+    func windowDidResize(_ notification: Notification) {
+        if let window { centreTrafficLights(in: window) }
+    }
+
+    func windowDidBecomeKey(_ notification: Notification) {
+        if let window { centreTrafficLights(in: window) }
+    }
+
+    func windowDidResignKey(_ notification: Notification) {
+        if let window { centreTrafficLights(in: window) }
+    }
+
+    func windowDidExitFullScreen(_ notification: Notification) {
+        if let window { centreTrafficLights(in: window) }
     }
 
     func windowDidMiniaturize(_ notification: Notification) {
@@ -70,6 +98,7 @@ final class FloatingWindowController: NSObject, NSWindowDelegate {
     }
 
     func windowDidDeminiaturize(_ notification: Notification) {
+        if let window { centreTrafficLights(in: window) }
         guard !isViewing else { return }
         isViewing = true
         model.viewerAppeared()

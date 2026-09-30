@@ -5,6 +5,9 @@ import SwiftUI
 /// and the list always scrolls within whatever height the window has.
 struct WindowView<Footer: View>: View {
     static var compactWidth: CGFloat { 360 }
+    /// The header must stay taller than the title bar: on macOS 26 a scroll view that meets the title bar gets a tinted
+    /// band drawn over the header. The traffic lights are moved down to its centre line by FloatingWindowController.
+    static var headerHeight: CGFloat { 44 }
 
     @Bindable var model: PanelModel
     let footer: Footer
@@ -49,7 +52,8 @@ struct WindowView<Footer: View>: View {
         .allowsHitTesting(false)
         .padding(.leading, 78)
         .padding(.trailing, 14)
-        .frame(height: 44)
+        .frame(height: Self.headerHeight)
         .background(WindowDragHandle())
     }
 }
+
