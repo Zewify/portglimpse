@@ -9,6 +9,13 @@ public enum CommandLabel {
         guard let first = arguments.first, !first.isEmpty else { return truncate(fallbackName) }
         let executable = baseName(first)
         guard Runtimes.isRuntime(executable) else {
+            // A runtime that retitled itself (Next.js sets "next-server (v14.2.18)", Puma "puma 6.4.2 (tcp://…)")
+            // is best named by its own title, cut to the first word.
+            if Runtimes.isRuntime(fallbackName) {
+                let title = first.hasPrefix("/") ? baseName(first) : first
+                let word = title.split(separator: " ").first.map(String.init) ?? title
+                return truncate(word)
+            }
             // Servers such as redis and postgres rewrite their process title, so argv[0] can read
             // "redis-server 127.0.0.1:6379". The executable's own file name is the clean label.
             return truncate(fallbackName.isEmpty ? executable : fallbackName)

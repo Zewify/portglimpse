@@ -62,4 +62,32 @@ struct CommandLabelTests {
         #expect(result.count == 40)
         #expect(result.hasSuffix("…"))
     }
+
+    @Test func selfTitledNextServerKeepsItsTitle() {
+        #expect(label(["next-server (v14.2.18)", ""], fallback: "node") == "next-server")
+    }
+
+    @Test func selfTitledPumaKeepsItsTitle() {
+        #expect(label(["puma 6.4.2 (tcp://0.0.0.0:3000) [app]"], fallback: "ruby") == "puma")
+    }
+
+    @Test func selfTitledRuntimeWithAPathTitleUsesItsBaseName() {
+        #expect(label(["/opt/tools/my server --flag"], fallback: "node") == "my")
+    }
+}
+
+struct RuntimesTests {
+    @Test func versionedAndCapitalisedPythonsAreRuntimes() {
+        #expect(Runtimes.isRuntime("python3.12"))
+        #expect(Runtimes.isRuntime("Python"))
+    }
+
+    @Test func otherInterpretersAreRuntimes() {
+        #expect(Runtimes.isRuntime("deno"))
+        #expect(Runtimes.isRuntime("java"))
+    }
+
+    @Test func aServerIsNotARuntime() {
+        #expect(!Runtimes.isRuntime("redis-server"))
+    }
 }

@@ -79,6 +79,26 @@ struct SnapshotTests {
         #expect(rows.map(\.pid) == [10, 11, 12, 1])
     }
 
+    @Test func processesSharingALowestPortKeepAStableOrder() {
+        for _ in 0..<20 {
+            let rows = builder().rows(own: [Listener(port: 3000, pid: 13), Listener(port: 3000, pid: 10)], all: nil)
+            #expect(rows.map(\.pid) == [10, 13])
+        }
+    }
+
+    @Test func appBundleInsideHomeIsShownHomeRelative() {
+        let home = ProcessDetails(executablePath: "/Users/me/Applications/Foo.app/Contents/MacOS/foo", arguments: ["foo"], workingDirectory: "/", uid: Self.me)
+        let builder = SnapshotBuilder(
+            classifier: Classifier(currentUID: Self.me, overrides: [:]),
+            home: "/Users/me",
+            inspect: { $0 == 30 ? home : nil },
+            userName: { _ in "me" }
+        )
+        let row = builder.rows(own: [Listener(port: 9000, pid: 30)], all: nil)[0]
+        #expect(row.section == .appsAndSystem)
+        #expect(row.folder == "~/Applications/Foo.app")
+    }
+
     @Test func overridesMoveRows() {
         let rows = builder(overrides: ["/Applications/DBeaver.app/Contents/MacOS/dbeaver": .dev]).rows(own: [Listener(port: 17030, pid: 12)], all: nil)
         #expect(rows[0].section == .dev)

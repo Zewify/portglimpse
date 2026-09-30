@@ -66,4 +66,9 @@ struct ClassifierTests {
         #expect(Classifier.appBundle(containing: "/Applications/Google Chrome.app/Contents/Frameworks/X.framework/Helpers/Helper.app/Contents/MacOS/Helper") == "/Applications/Google Chrome.app")
         #expect(Classifier.appBundle(containing: "/usr/local/bin/node") == nil)
     }
+
+    @Test func runtimeBundledInAnAppIsAppsAndSystem() {
+        #expect(section("/Applications/Some.app/Contents/Resources/node") == .appsAndSystem)
+        #expect(section("/Applications/Some.app/Contents/MacOS/java") == .appsAndSystem)
+    }
 }

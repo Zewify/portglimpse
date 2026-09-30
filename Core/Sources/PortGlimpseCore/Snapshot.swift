@@ -50,7 +50,7 @@ public struct SnapshotBuilder: Sendable {
                 executablePath: details.executablePath
             )
         }
-        .sorted { ($0.section.order, $0.ports[0]) < ($1.section.order, $1.ports[0]) }
+        .sorted { ($0.section.order, $0.ports[0], $0.pid) < ($1.section.order, $1.ports[0], $1.pid) }
     }
 
     func folder(for details: ProcessDetails, in section: Section) -> String? {
@@ -58,7 +58,7 @@ public struct SnapshotBuilder: Sendable {
         case .otherUsers:
             return nil
         case .appsAndSystem:
-            if let path = details.executablePath, let bundle = Classifier.appBundle(containing: path) { return bundle }
+            if let path = details.executablePath, let bundle = Classifier.appBundle(containing: path) { return displayPath(bundle) }
             return details.workingDirectory.flatMap(displayPath)
         case .dev:
             return details.workingDirectory.flatMap(displayPath)
