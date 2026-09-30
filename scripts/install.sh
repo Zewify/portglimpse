@@ -81,7 +81,7 @@ main() {
   dest=$(install_dir)
   installed=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$dest/$APP/Contents/Info.plist" 2>/dev/null || true)
   if [ -n "$version" ] && [ "$installed" = "$version" ]; then
-    say "PortGlimpse $version is already installed in $dest, so there is nothing to update."
+    say "$version is already installed in $dest, so there is nothing to update."
     if [ "${PORTGLIMPSE_NO_LAUNCH:-}" != "1" ] && ! is_running; then launch_app "$dest/$APP"; fi
     return 0
   fi
