@@ -1,0 +1,25 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the tag matches the app version
+        run: ./scripts/check-version.sh "$GITHUB_REF_NAME"
+      - name: Use the newest Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -n 1)"
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Test
+        run: ./scripts/test.sh
+      - name: Package
+        run: ./scripts/package.sh
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" build/release/PortGlimpse-*.zip build/release/PortGlimpse-*.zip.sha256 --title "PortGlimpse ${GITHUB_REF_NAME#v}" --notes-file build/release/notes.md --verify-tag
