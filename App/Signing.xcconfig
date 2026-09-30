@@ -1,0 +1,7 @@
+// Committed signing defaults: ad hoc, which is enough to build and run locally.
+// Developer ID signing for releases comes with the distribution plan; a local identity
+// can go in Signing.local.xcconfig next to this file (gitignored).
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = -
+DEVELOPMENT_TEAM =
+#include? "Signing.local.xcconfig"
