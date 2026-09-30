@@ -28,7 +28,7 @@ Those form the second plan, written once the Developer ID certificate exists.
 - Fonts: Bricolage Grotesque (title), Figtree (text), IBM Plex Mono (ports), bundled with their OFL licences.
 - The panel is always dark, regardless of the system appearance.
 - Zewify rule: nothing in the app, repo, commits or docs may name or identify the person who builds it — no names, handles, personal links or emails.
-- Commits use the repo's configured author `Zewify <335855398+Zewify@users.noreply.github.com>`; never pass `--author` or change `user.name` / `user.email`, and add no co-author trailers.
+- Commits use the repo's configured author `Zewify <dev@zewify.com>`; never pass `--author` or change `user.name` / `user.email`, and add no co-author trailers.
 - Markdown docs put each full sentence on its own line.
 
 ## Review Focus
@@ -3510,7 +3510,7 @@ Run: `grep -v '^#' ~/.config/zewify/identity-denylist | git grep -niEf /dev/stdi
 Expected: `clean`.
 If the denylist file is missing, stop and ask the owner for it rather than skipping the check.
 Run: `git log --format='%an <%ae>' | sort -u`
-Expected: exactly `Zewify <335855398+Zewify@users.noreply.github.com>`.
+Expected: exactly `Zewify <dev@zewify.com>`.
 
 - [ ] **Step 3: Final walkthrough on a clean install**
 

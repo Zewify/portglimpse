@@ -186,7 +186,7 @@ The page must pass the existing `tests/dist.test.mjs` identity denylist.
 
 - Zewify must never identify the person who builds it.
 - The repo lives in the `zewify` GitHub organization, created on 2026-09-30, whose membership is private.
-- Commits are authored as `Zewify <335855398+Zewify@users.noreply.github.com>`, set in the repo's own git config.
+- Commits are authored as `Zewify <dev@zewify.com>`, set in the repo's own git config.
 - Releases are published by GitHub Actions.
 - Issues are disabled; the website names the contact route.
 - The app bundle ID is `com.zewify.portglimpse`, and nothing in the app, repo or site names a person.
