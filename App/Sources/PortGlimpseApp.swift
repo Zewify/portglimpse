@@ -7,7 +7,7 @@ struct PortGlimpseApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            PanelView(model: delegate.model) {
+            PanelView(model: delegate.model, onPopOut: { delegate.popOut() }) {
                 PanelFooter(model: delegate.model, loginItem: delegate.loginItem, updates: delegate.updates)
             }
         } label: {
@@ -82,10 +82,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = PanelModel()
     let loginItem = LoginItem()
     let updates = UpdateChecker()
+    lazy var window = FloatingWindowController(model: model) { [unowned self] in
+        AnyView(WindowView(model: model) {
+            PanelFooter(model: model, loginItem: loginItem, updates: updates)
+        })
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         model.start()
         updates.start()
         loginItem.enableOnFirstLaunch()
+    }
+
+    /// Opening the window makes it key, which dismisses the menu bar panel.
+    func popOut() {
+        window.show()
     }
 }
