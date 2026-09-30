@@ -1,3 +1,4 @@
+import os
 import PortGlimpseCore
 import SwiftUI
 
@@ -98,9 +99,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// The panel is closed the way a click on its icon closes it: closing or hiding its window directly
     /// leaves MenuBarExtra believing it is still open, and the next click on the icon would do nothing.
     func popOut() {
+        // The panel is the key window at click time; taken before the pop-out window becomes key.
+        let panelWindow = NSApp.keyWindow
         window.show()
-        Self.statusItemButton()?.performClick(nil)
+        // If the system already closed the panel when it resigned key, clicking the icon would open it again.
+        guard panelWindow?.isVisible == true else { return }
+        guard let button = Self.statusItemButton() else {
+            Self.logger.error("Couldn't find the status item button to close the panel")
+            return
+        }
+        button.performClick(nil)
     }
+
+    private static let logger = Logger(subsystem: "com.zewify.portglimpse", category: "panel")
 
     private static func statusItemButton() -> NSButton? {
         func button(in view: NSView) -> NSButton? {
